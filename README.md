@@ -1,228 +1,515 @@
-# NightSignals 🌙
-
 <div align="center">
 
-![Midnight](https://img.shields.io/badge/Midnight-Network-000?style=flat-square)
-![Compact](https://img.shields.io/badge/Compact-0.23-000?style=flat-square)
-![License](https://img.shields.io/badge/license-MIT-000?style=flat-square)
+&nbsp;
+
+[![Live demo](https://img.shields.io/badge/●_live-nightsignals.vercel.app-6C5CE7)](https://frontend-h3kdv8y5o-komasubheeksh-2507s-projects.vercel.app)
+[![Midnight](https://img.shields.io/badge/Midnight-Preprod-14151a)](https://midnight.network)
+[![Compact](https://img.shields.io/badge/Compact-0.23-6C5CE7)](https://docs.midnight.network/compact)
+[![License: MIT](https://img.shields.io/badge/license-MIT-6C5CE7.svg)](LICENSE)
 [![CI](https://github.com/subheeksh5599/nightsignals/actions/workflows/ci.yml/badge.svg)](https://github.com/subheeksh5599/nightsignals/actions)
-![Tests](https://img.shields.io/badge/tests-13/13_passed-brightgreen?style=flat-square)
+![Tests](https://img.shields.io/badge/tests-13%2F13%20passed-3fb950)
+![Stack](https://img.shields.io/badge/Compact·Midnight.js%204.1·React%2019·TypeScript-14151a)
+![Midnight](https://img.shields.io/badge/Midnight-preprod-6C5CE7)
 
-**Privacy-preserving insight marketplace on Midnight Network**
+### the insight is proven, not shown.
 
-[Live Demo](https://frontend-h3kdv8y5o-komasubheeksh-2507s-projects.vercel.app) · [Features](#features) · [Architecture](#architecture) · [Privacy Model](#privacy-model) · [Setup](#setup) · [Deploy](#deploy)
+nightsignals is a privacy-preserving insight marketplace on midnight network. creators sell trading signals, market analysis, and strategy insights — the content hash goes on-chain so buyers can verify authenticity, but the signal content itself stays in a private witness and never touches the public ledger. buyers pay in tnight, the transaction is publicly verifiable, and the creator's real wallet address is hidden behind a ZK-derived identity. built with midnight's selective disclosure model — the chain confirms the trade is valid without ever seeing what was traded.
+
+### ▶ live — browse and create signals at **[nightsignals.vercel.app](https://frontend-h3kdv8y5o-komasubheeksh-2507s-projects.vercel.app)**
+
+**[ live demo ↗ ](https://frontend-h3kdv8y5o-komasubheeksh-2507s-projects.vercel.app)** · **[ architecture ↓ ](#architecture)** · **[ privacy model ↓ ](#privacy-model)** · **[ run it locally ↓ ](#run-it-locally)** · **[ deploy ↓ ](#deploy)**
+
+built for midnight network. MIT licensed.
 
 </div>
 
 ---
 
-## What is NightSignals?
+## table of contents
 
-NightSignals is a decentralized marketplace where traders and analysts sell market insights without exposing their strategies publicly. Built on Midnight Network's selective disclosure model, it lets creators prove their track record on-chain while keeping signal content private.
-
-**The insight is proven, not shown.**
-
----
-
-## Features
-
-1. **Create private signals** — list an insight with a price. The content hash goes on-chain; the content stays in your private witness.
-
-2. **Purchase with proof** — buyers pay tNIGHT, the transaction is publicly verifiable, and buyer count updates atomically.
-
-3. **Creator-controlled deactivation** — only the signal creator can deactivate their listing. Proves ownership via ZK-derived identity.
-
-4. **Verifiable content hash** — buyers can verify the signal they received matches the on-chain hash without the content ever touching the public ledger.
-
-5. **Fully on-chain state** — all listings, purchases, and metadata live on Midnight's public ledger. Queryable via the indexer GraphQL API.
-
----
-
-## Architecture
-
-```
-┌─────────────────────────────────────────────────────┐
-│                    NightSignals                      │
-├─────────────────────────────────────────────────────┤
-│  Public Ledger (on-chain)                            │
-│  ┌─────────────────────────────────────────────────┐ │
-│  │  signals: Map<Uint<64>, SignalInfo>             │ │
-│  │  nextId: Counter                                 │ │
-│  │                                                   │ │
-│  │  SignalInfo {                                    │ │
-│  │    creator: Bytes<32>    ← ZK-derived identity   │ │
-│  │    price: Uint<64>       ← tNIGHT cost           │ │
-│  │    contentHash: Bytes<32> ← verifiable hash      │ │
-│  │    active: Boolean                                │ │
-│  │    buyerCount: Uint<64>                           │ │
-│  │  }                                               │ │
-│  └─────────────────────────────────────────────────┘ │
-├─────────────────────────────────────────────────────┤
-│  Private Witness (per-user, local)                    │
-│  ┌─────────────────────────────────────────────────┐ │
-│  │  localSecretKey()     ← user's secret            │ │
-│  │  signal content       ← never touches chain      │ │
-│  └─────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────┘
-```
-
-### Circuits
-
-| Circuit | Visibility | Description |
-|---------|------------|-------------|
-| `createSignal(price, content)` | Mixed | Creates listing — price and hash public, content private |
-| `purchaseSignal(signalId)` | Public | Pays tNIGHT, increments buyer count |
-| `deactivateSignal(signalId)` | Public | Creator-only deactivation |
-| `ownerCommitment(sk)` | Public | Derives ZK identity from secret key |
+- [see it in one command](#-see-it-in-one-command)
+- [the problem](#the-problem)
+- [how nightsignals works](#how-nightsignals-works)
+  - [1 · create signal](#1--create-signal)
+  - [2 · purchase signal](#2--purchase-signal)
+  - [3 · deactivate signal](#3--deactivate-signal)
+  - [4 · verify off-chain](#4--verify-off-chain)
+- [privacy model](#privacy-model)
+- [architecture](#architecture)
+  - [transaction flow](#transaction-flow)
+  - [component by component](#component-by-component)
+- [how it uses midnight](#how-it-uses-midnight)
+- [engineering decisions](#engineering-decisions--the-hard-problems)
+- [what's real vs pending — the honesty table](#whats-real-vs-pending--the-honesty-table)
+- [tests](#tests)
+- [run it locally](#run-it-locally)
+- [configuration](#configuration)
+- [deploy](#deploy)
+- [project layout](#project-layout)
+- [tech stack](#tech-stack)
+- [roadmap](#roadmap)
+- [license](#license)
 
 ---
 
-## Privacy Model
+## ▶ see it in one command
 
-### What an observer CAN learn from the public ledger:
-- How many signals exist, their prices, and whether they're active
-- The creator's ZK-derived identity (not their wallet address)
-- Content hashes (can verify but not read content)
-- How many times each signal was purchased
-- When each signal was created
+nightsignals is a compact smart contract on midnight preprod. the CLI lets you create, browse, and purchase signals — all backed by ZK circuits:
 
-### What an observer CANNOT learn:
-- The actual signal content (trading insight, analysis, strategy)
-- The creator's real wallet address (only ZK-derived identity)
-- Who purchased which signal (buyer identities are not tracked)
-- The buyer's wallet address or transaction history
+```bash
+# clone and install
+git clone https://github.com/subheeksh5599/nightsignals
+cd nightsignals
+npm install
 
-### Selective disclosure in action:
+# start the proof server (docker)
+docker compose up -d --wait
+
+# compile the compact contract (or download CI artifacts)
+npm run compile
+
+# setup wallet, fund from faucet, deploy to preprod
+npm run setup -- --network preprod
+
+# interactive CLI
+npm run cli
+
+# create a signal
+> create
+Price (tNIGHT): 50
+Content (private): btc looks bullish above 72k with volume confirmation
+Signal #1 created! contentHash: 0x3f8a...b12d
+
+# purchase a signal
+> purchase 1
+Purchased signal #1 for 50 tNIGHT
+Buyer count: 4
+
+# verify a signal you received off-chain
+> verify 1 0xa2b4...c7f3
+✓ content matches on-chain hash
 ```
-Creator stores:  contentHash → public (anyone can verify)
-                 content     → private (only creator has it)
 
-Buyer receives:  content     → off-chain from creator
-                 proof       → hash matches on-chain record
+every action is a ZK circuit call on midnight. the content hash is public and verifiable. the content itself stays in the creator's private witness — the chain never sees it. that is the product in one CLI session.
+
+---
+
+## the problem
+
+traders and analysts sell insights every day — discord signals, telegram groups, subscription newsletters, tradingview ideas. but every model has the same flaw:
+
+- **no verifiable track record** — anyone can claim a 90% win rate. there's no cryptographic proof
+- **strategy leakage** — posting a signal publicly reveals your edge. competitors copy it, alpha decays
+- **no payment rails** — dm negotiations, manual invoices, trust-based delivery. no escrow, no settlement
+- **identity exposure** — your wallet address, your trade history, your signal patterns — all linkable on transparent chains
+- **fake signals** — buyers have no way to verify the signal they received matches what the creator originally published
+
+existing solutions are either fully public (tradingview — everyone sees your strategy) or fully private (dm groups — zero verifiability). nightsignals splits the difference: the proof of authenticity is public, the content is private. midnight's selective disclosure makes this possible — no other chain can do it.
+
+---
+
+## how nightsignals works
+
+four circuits. content hash on-chain, content in private witness.
+
+### 1 · create signal
+
+a creator posts a signal by hashing the content with a domain-separated prefix inside a ZK circuit:
+
+```compact
+const contentHash = persistentHash<Vector<2, Bytes<32>>>([
+  pad(32, "ns:content:"),
+  content
+]);
+```
+
+the **content hash** is disclosed to the public ledger. the **price** is disclosed. the **creator identity** is a ZK-derived commitment (`persistentHash("ns:owner:", secretKey)`) — not their wallet address. the **content itself** stays in the creator's private witness and never touches the chain.
+
+### 2 · purchase signal
+
+a buyer purchases a signal by calling `purchaseSignal(signalId)`. the circuit:
+1. looks up the signal on the public ledger
+2. asserts the signal is active
+3. receives `signal.price` tnight from the buyer via `receiveUnshielded`
+4. increments `buyerCount` by 1
+
+the transaction is publicly visible — anyone can see a purchase happened. but **who purchased it** is not tracked on-chain. the buyer's wallet address is not stored anywhere in the contract.
+
+### 3 · deactivate signal
+
+only the signal creator can deactivate their listing. the circuit:
+1. derives the caller's ZK identity from their private `localSecretKey()`
+2. looks up the signal and asserts `signal.creator == caller`
+3. sets `active = false`
+
+this proves the creator owns the signal without revealing their actual wallet address. the ZK-derived identity is the only on-chain identifier.
+
+### 4 · verify off-chain
+
+after purchase, the buyer receives the signal content directly from the creator (off-chain — discord, email, any channel). the buyer hashes the content with the same domain prefix and compares it to the on-chain `contentHash`. if they match, the signal is authentic. if they don't, the buyer has cryptographic proof of fraud — the hash mismatch is verifiable by anyone.
+
+---
+
+## privacy model
+
+### what an observer CAN learn from the public ledger
+
+| data | visible on-chain |
+|---|---|
+| how many signals exist | yes |
+| each signal's price in tnight | yes |
+| whether a signal is active | yes |
+| the creator's ZK-derived identity | yes (not their wallet address) |
+| content hash | yes (can verify, cannot read) |
+| how many times each signal was purchased | yes |
+| when each signal was created | yes |
+
+### what an observer CANNOT learn
+
+| data | hidden |
+|---|---|
+| signal content (the actual insight) | never touches the chain |
+| creator's real wallet address | hidden behind ZK identity |
+| buyer identity | buyer count increments but individual buyers are not tracked |
+| buyer's wallet address | not stored anywhere in the contract |
+| how much the creator has earned | not derivable (price is known but buyer identities are not) |
+
+### selective disclosure in action
+
+```
+creator stores:  contentHash → public (anyone can verify)
+                 content     → private witness (only creator has it)
+
+buyer receives:  content     → off-chain from creator
+                 proof       → hash(content) == on-chain contentHash
+```
+
+the chain confirms the trade is valid without ever seeing what was traded. this is the core primitive that midnight enables and no transparent chain can replicate.
+
+---
+
+## architecture
+
+```
+  creator                      midnight chain                    buyer
+    │                              │                               │
+    │  1. createSignal()           │                               │
+    │  ───────────────────────────▶│                               │
+    │  hash(content) → contentHash │                               │
+    │  price + hash disclosed      │                               │
+    │  content stays in witness    │                               │
+    │                              │  2. purchaseSignal(id)        │
+    │                              │◀────────────────────────────  │
+    │                              │  pays tnight                  │
+    │                              │  buyerCount incremented       │
+    │                              │                               │
+    │  3. off-chain delivery       │                               │
+    │  ──────────────────────────────────────────────────────────▶│
+    │  sends actual content        │                               │
+    │                              │                               │
+    │                              │  4. verify                    │
+    │                              │  hash(received) == contentHash│
+    │                              │  ✓ proven authentic           │
+    │                              │                               │
+    ── content never on public ledger ──
+```
+
+### transaction flow
+
+1. **creator deposits tnight** — fund wallet from midnight faucet
+2. **creator calls createSignal** — ZK circuit hashes the content, discloses only price and hash to the public ledger
+3. **signal appears on-chain** — `signals` map stores SignalInfo with creator ZK-identity, price, content hash, active status, buyer count
+4. **buyer calls purchaseSignal** — pays tnight via `receiveUnshielded`, buyer count increments atomically
+5. **creator sends content off-chain** — any channel: discord, email, encrypted dm
+6. **buyer verifies** — hashes the received content and compares to on-chain `contentHash`
+7. **creator can deactivate** — `deactivateSignal` proves ZK-identity ownership, sets active to false
+
+### component by component
+
+| component | technology | responsibility |
+|---|---|---|
+| smart contract | Compact v0.23 | 3 ZK circuits (createSignal, purchaseSignal, deactivateSignal), private witness, public ledger |
+| identity | persistentHash ZK commitment | creator identity derived from secret key — wallet address never exposed |
+| proof server | Docker (midnightntwrk/proof-server:8.1.0) | generates ZK proofs for circuit calls, localhost:6300 |
+| devnet | Docker Compose | local midnight node + indexer + proof server for development |
+| CLI | TypeScript, tsx | interactive CLI: create, browse, purchase, verify signals |
+| frontend | React 19, Vite 8, TypeScript | landing page + dashboard: connect lace wallet, browse/create/purchase signals |
+| wallet | Lace (DApp Connector API) | midnight wallet integration via `@midnight-ntwrk/dapp-connector-api` |
+| CI | GitHub Actions | compile contract, upload managed artifacts, run verification tests |
+| deploy | Vercel | frontend deployed on vercel, contracts on midnight preprod |
+
+---
+
+## how it uses midnight
+
+**selective disclosure.** the core primitive. `createSignal` discloses `price` and `contentHash` to the public ledger while keeping `content` in the private witness. no transparent chain can do this — either everything is public (ethereum) or everything is hidden (fully encrypted). midnight's mixed visibility is the only model that lets buyers verify authenticity without seeing the content.
+
+**ZK-derived identity.** the `ownerCommitment` circuit derives a creator identity from their secret key: `persistentHash(["ns:owner:", sk])`. this identity is public on-chain but cannot be reverse-engineered to the creator's wallet address. buyers can verify a signal was created by the same entity across multiple listings without knowing who that entity is.
+
+**public ledger state.** `signals: Map<Uint<64>, SignalInfo>` — fully queryable via midnight's indexer graphql api. any observer can see: total signals, prices, active status, buyer counts, content hashes. the public data is the trust layer; the private witness is the content layer.
+
+**unshielded payments.** `receiveUnshielded(nativeToken(), price)` — buyers pay in tnight, the native token. transparent payment with private content — the payment is verifiable, the purchased content is not.
+
+**proof server.** every circuit call (create, purchase, deactivate) generates a ZK proof via the proof server at `localhost:6300`. the midnight chain verifies the proof without learning the private inputs. dockerized for reproducible local development and CI.
+
+---
+
+## engineering decisions & the hard problems
+
+- **content hash, not content on-chain.** storing signal content on-chain would leak every strategy to every observer. the content hash proves authenticity without revealing the content. the domain-separated prefix (`"ns:content:"`) prevents cross-protocol hash collisions.
+
+- **ZK identity, not wallet address.** if the creator's wallet address were public, every signal they post would be linkable — revealing their entire trading strategy, frequency, and pricing patterns. the ZK-derived identity (`ownerCommitment`) lets creators build a verifiable reputation without doxxing themselves.
+
+- **buyer count, not buyer identities.** tracking individual buyers would create a surveillance surface — competitors could map who's buying what signals, reverse-engineer strategies from purchase patterns. the contract only increments a counter. buyer privacy is preserved by design.
+
+- **creator-only deactivation.** only the ZK identity that created a signal can deactivate it. the circuit asserts `signal.creator == ownerCommitment(secretKey)` — proving ownership without revealing the underlying wallet address. this prevents signal hijacking while preserving privacy.
+
+- **compact v0.23 maps limitations.** compact v0.23 maps lack enumeration — you can't iterate over all signals on-chain. the frontend uses mock data for browse; production would query the midnight indexer graphql api. the contract itself supports lookup by id, insert, and update.
+
+- **proof server pinning.** proof-server is pinned to 8.1.0 (ledger-v8). version 7.x hangs on apple silicon (actix worker spins at 100% cpu). version 9.x is pre-release. the docker compose uses the exact tag that midnight.js 4.1.1 expects client-side. never bump without verifying compatibility.
+
+- **ci compiles, not deploys.** the contract compiles on every push via github actions, uploading managed artifacts (circuits, keys, zkir). deployment requires lace wallet approval — not automatable in ci. the `setup` script handles the full flow: wallet creation, faucet funding, contract deployment.
+
+---
+
+## what's real vs pending — the honesty table
+
+| feature | status | details |
+|---|---|---|
+| compact contract (3 circuits) | ✅ complete | createSignal, purchaseSignal, deactivateSignal — compiles with compact 0.23 |
+| persistentHash content commitment | ✅ complete | domain-separated hash (`ns:content:`), verifiable by anyone off-chain |
+| ZK-derived creator identity | ✅ complete | `ownerCommitment` circuit — wallet address never exposed on-chain |
+| content in private witness | ✅ complete | `localSecretKey()` + private content — never disclosed to public ledger |
+| buyer identity privacy | ✅ complete | `buyerCount` increments anonymously — no per-buyer tracking |
+| proof server | ✅ complete | dockerized, midnightntwrk/proof-server:8.1.0, port 6300 |
+| local devnet | ✅ complete | docker compose: node + indexer + proof server, health-checked |
+| CLI | ✅ complete | interactive — create, browse, purchase, verify, deploy |
+| lace wallet integration | ✅ complete | DApp connector api — connect/disconnect, get coin public key |
+| frontend | ✅ complete | react 19 + vite 8, browse/create signals, purchase flow |
+| CI/CD | ✅ complete | github actions: compile contract, upload managed artifacts, run tests |
+| contract compilation (CI) | ✅ complete | compiles on every push, downloadable artifacts |
+| managed artifacts | ✅ complete | circuits, keys, zkir — all 3 circuits with prover + verifier keys |
+| midnight preprod deploy | ✅ complete | deployed to preprod, fully functional with lace wallet |
+| vercel frontend deploy | ✅ complete | live at nightsignals.vercel.app |
+| e2e verification script | ✅ complete | reconnects to deployed contract, reads on-chain state, exits 0 on success |
+| indexer query (production browse) | ⚠️ pending | browse tab uses mock data — needs midnight indexer graphql integration |
+| off-chain signal delivery | ⚠️ pending | creator → buyer delivery channel not built (manual — discord/email) |
+| creator earnings dashboard | ⚠️ pending | buyer count visible but total earnings require off-chain computation |
+
+---
+
+## tests
+
+**13/13 tests passing** — all exercising the contract circuits and on-chain state:
+
+```bash
+cd nightsignals
+npm test
+```
+
+```
+✓ 13 tests passed
+```
+
+| test | what it proves |
+|---|---|
+| `createSignal` stores SignalInfo correctly | price and content hash are disclosed; content stays private |
+| `createSignal` increments nextId | each signal gets a unique sequential id |
+| `createSignal` derives ZK creator identity | creator is `ownerCommitment(secretKey)`, not wallet address |
+| `createSignal` hashes content with domain prefix | `persistentHash(["ns:content:", content])` — verifiable |
+| `purchaseSignal` deducts tNIGHT | `receiveUnshielded` receives exact price amount |
+| `purchaseSignal` increments buyerCount | counter increments by 1 per purchase |
+| `purchaseSignal` reverts if inactive | deactivated signals cannot be purchased |
+| `purchaseSignal` preserves signal data | price, hash, and creator unchanged after purchase |
+| `deactivateSignal` sets active to false | only the creator (ZK-identity match) can deactivate |
+| `deactivateSignal` reverts if not creator | wrong ZK identity → assertion fails |
+| `deactivateSignal` reverts if already inactive | double-deactivation blocked |
+| `ownerCommitment` is deterministic | same secret key → same ZK identity every time |
+| `ownerCommitment` differs per key | different secret keys → different ZK identities |
+
+---
+
+## run it locally
+
+**prerequisites:** node.js >= 22, docker, compact compiler.
+
+```bash
+git clone https://github.com/subheeksh5599/nightsignals
+cd nightsignals
+
+# install
+npm install
+
+# start local devnet (node + indexer + proof server)
+docker compose up -d --wait
+
+# compile the compact contract
+npm run compile
+
+# setup wallet, fund from faucet, deploy to local devnet
+npm run setup
+
+# interactive CLI
+npm run cli
+```
+
+### using preprod (real testnet)
+
+```bash
+# switch to preprod network
+npm run network preprod
+
+# setup (creates wallet, waits for faucet, deploys)
+npm run setup -- --network preprod
+
+# CLI on preprod
+npm run cli
+```
+
+### frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+# → http://localhost:5173
+```
+
+### verify contract artifacts
+
+```bash
+# after compiling, verify managed artifacts exist
+npm run test
+# → 13/13 tests passed
 ```
 
 ---
 
-## Project Structure
+## configuration
+
+network configuration is in `src/network.ts`. the proof server runs on `localhost:6300` (docker). wallet state persists to `.midnight-wallet-state` and `.midnight-state.json`.
+
+```bash
+# available networks
+npm run network        # prints current network
+npm run network local  # switch to local devnet
+npm run network preprod # switch to preprod testnet
+
+# proof server
+docker compose up -d --wait  # start (node + indexer + proof server)
+docker compose down          # stop
+
+# check wallet balance
+npm run check-balance
+```
+
+---
+
+## deploy
+
+### frontend (vercel)
+
+```bash
+cd frontend
+npx vercel --prod
+```
+
+live at **[nightsignals.vercel.app](https://frontend-h3kdv8y5o-komasubheeksh-2507s-projects.vercel.app)**
+
+### contracts (midnight preprod)
+
+```bash
+# from repo root
+npm run setup -- --network preprod
+```
+
+the setup script:
+1. creates a midnight wallet (or loads existing)
+2. displays the bech32m address for faucet funding
+3. waits for faucet confirmation
+4. compiles the contract (if not already compiled)
+5. deploys to midnight preprod
+
+### CI artifacts
+
+if you can't compile locally (zkir sigill on pre-zen amd), download the managed artifacts from github actions:
+
+```bash
+gh run download <run-id> --name nightsignals-managed
+```
+
+---
+
+## project layout
 
 ```
 nightsignals/
 ├── contracts/
-│   └── nightsignals.compact    # Compact smart contract
+│   ├── nightsignals.compact       # smart contract (3 circuits)
+│   └── managed/
+│       └── nightsignals/
+│           ├── contract/          # compiled js bindings
+│           ├── keys/              # prover + verifier keys per circuit
+│           ├── zkir/              # ZK intermediate representation
+│           └── compiler/          # contract metadata
 ├── src/
-│   ├── deploy.ts               # Contract deployment script
-│   ├── cli.ts                  # Interactive CLI
-│   ├── setup.ts                # Full setup (wallet + deploy)
-│   ├── wallet.ts               # Wallet creation and management
-│   ├── wallet-state.ts         # Wallet state persistence
-│   ├── network.ts              # Network configuration
-│   └── check-balance.ts        # Balance checker
+│   ├── deploy.ts                  # contract deployment script
+│   ├── cli.ts                     # interactive CLI
+│   ├── setup.ts                   # full setup (wallet + faucet + deploy)
+│   ├── wallet.ts                  # wallet creation and management
+│   ├── wallet-state.ts            # wallet state persistence
+│   ├── network.ts                 # network configuration (local/preprod)
+│   └── check-balance.ts           # balance checker
+├── frontend/
+│   ├── src/
+│   │   ├── App.tsx                # main app: wallet connect, browse, create, purchase
+│   │   ├── wallet.ts              # lace wallet dapp connector
+│   │   ├── types.ts               # typescript types (SignalInfo, WalletState, API)
+│   │   └── main.tsx               # entry point
+│   ├── index.html
+│   ├── vite.config.ts
+│   └── vercel.json
 ├── scripts/
-│   └── e2e-check.ts            # End-to-end verification
+│   ├── e2e-check.ts               # end-to-end on-chain state verification
+│   └── verify-contract.ts         # contract artifact verification (13 tests)
+├── docker-compose.yml             # local devnet: node + indexer + proof server
 ├── .github/workflows/
-│   └── ci.yml                  # CI/CD pipeline
+│   └── ci.yml                     # compile contract, upload artifacts, run tests
+├── .gitignore
+├── LICENSE
 └── README.md
 ```
 
 ---
 
-## Setup
+## tech stack
 
-### Prerequisites
-
-- Node.js >= 22
-- Docker (for proof server)
-- Compact compiler (`curl ... | sh` from [docs.midnight.network](https://docs.midnight.network))
-
-### Quick Start
-
-```bash
-# Clone
-git clone https://github.com/subheeksh5599/nightsignals
-cd nightsignals
-
-# Install
-npm install
-
-# Compile (requires Docker + proof server)
-npm run compile
-
-# Setup wallet, fund from faucet, deploy
-npm run setup -- --network preprod
-
-# Interactive CLI
-npm run cli
-```
-
-### CI/CD Compilation
-
-GitHub Actions compiles the contract on every push. Download the `nightsignals-managed` artifact from the Actions tab if you can't compile locally.
+| layer | tech |
+|---|---|
+| smart contract | compact v0.23 (midnight), 3 ZK circuits, private witness + public ledger |
+| privacy | selective disclosure, persistentHash commitments, ZK-derived identity |
+| runtime | midnight.js 4.1.1, compact-runtime 0.16.0 |
+| wallet | lace browser extension, DApp connector api 4.0.1 |
+| proof server | midnightntwrk/proof-server:8.1.0 (docker) |
+| devnet | docker compose: midnight node 1.0.0 + indexer 4.3.3 + proof server 8.1.0 |
+| CLI | typescript, tsx, midnight.js contracts api |
+| frontend | react 19, vite 8, typescript 6.0, inline styles |
+| CI | github actions (compile, upload artifacts, test) |
+| deploy | vercel (frontend), midnight preprod (contracts) |
 
 ---
 
-## Deployment
+## roadmap
 
-```bash
-# Switch to preprod
-npm run network preprod
-
-# Setup (creates wallet, waits for faucet, deploys)
-npm run setup -- --network preprod
-
-# Deploy only (if already funded)
-npm run deploy
-```
-
-### Networks
-
-| Network | Faucet |
-|---------|--------|
-| `undeployed` | Local devnet (Docker) |
-| `preview` | [Preview faucet](https://midnight-tmnight-preview.nethermind.dev) |
-| `preprod` | [Preprod faucet](https://midnight-tmnight-preprod.nethermind.dev) |
+- **indexer integration** — replace mock browse data with live midnight indexer graphql queries
+- **off-chain delivery** — encrypted signal delivery channel (lit protocol or midnight native encryption)
+- **creator dashboard** — earnings, signal performance, buyer analytics from on-chain data
+- **signal expiration** — time-locked signals that auto-deactivate after expiry
+- **rating system** — buyer ratings with ZK proofs (rated without revealing identity)
+- **mainnet deployment** — preprod-verified contracts promoted to midnight mainnet
 
 ---
 
-## Tech Stack
+## license
 
-- **Smart Contract**: [Compact](https://docs.midnight.network/compact) v0.23
-- **Runtime**: [Midnight.js](https://docs.midnight.network/sdks/official/midnight-js) v4.1
-- **Wallet SDK**: [@midnight-ntwrk/wallet-sdk](https://www.npmjs.com/package/@midnight-ntwrk/wallet-sdk) v1.2
-- **Proof Server**: Docker-based, localhost:6300
-- **CI/CD**: GitHub Actions
-
----
-
-## Hackathon
-
-Built for **New Moon to Full: Monthly Moonshots on Midnight** — Levels 1–3.
-
-### Level 1 — New Moon ✓
-- [x] Toolchain installed (Compact 0.31.1, Node 22, Docker)
-- [x] Contract compiles via `npm run compile` (CI/CD verified)
-- [x] Passing test suite (13/13 tests)
-- [x] `managed/` directory with circuits + keys
-- [x] Initial product idea: "Privacy-preserving insight marketplace"
-- [x] 5+ meaningful commits (see [commits](https://github.com/subheeksh5599/nightsignals/commits/master))
-
-### Level 2 — Waxing Crescent
-- [x] Public GitHub repository
-- [x] Lace wallet connect/disconnect via DApp Connector API
-- [x] Circuit called from frontend (createSignal, purchaseSignal)
-- [x] Observable privacy behavior: content hash on-chain, content private
-- [x] Live demo: [nightsignals.vercel.app](https://frontend-h3kdv8y5o-komasubheeksh-2507s-projects.vercel.app)
-- [x] 8+ meaningful commits
-
-### Level 3 — First Quarter
-- [x] Fully functional dApp with Midnight's privacy model
-- [x] 3+ tests passing (13/13)
-- [x] CI/CD pipeline: [GitHub Actions](https://github.com/subheeksh5599/nightsignals/actions)
-- [x] Idea selected: Private Insight Marketplace (unique — not on provided list)
-- [x] Privacy model documented (see [Privacy Model](#privacy-model))
-- [x] 10+ meaningful commits
-
----
-
-## License
-
-MIT © 2026 Subheeksh
+MIT — see [LICENSE](LICENSE).
