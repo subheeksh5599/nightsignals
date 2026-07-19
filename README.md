@@ -195,9 +195,31 @@ npm run deploy
 
 ## Hackathon
 
-Built for **New Moon to Full: Monthly Moonshots on Midnight** — Level 1 through Level 3.
+Built for **New Moon to Full: Monthly Moonshots on Midnight** — Levels 1–3.
 
-See [Submission Checklist](#) for full requirements.
+### Level 1 — New Moon ✓
+- [x] Toolchain installed (Compact 0.31.1, Node 22, Docker)
+- [x] Contract compiles via `npm run compile` (CI/CD verified)
+- [x] Passing test suite (13/13 tests)
+- [x] `managed/` directory with circuits + keys
+- [x] Initial product idea: "Privacy-preserving insight marketplace"
+- [x] 5+ meaningful commits (see [commits](https://github.com/subheeksh5599/nightsignals/commits/master))
+
+### Level 2 — Waxing Crescent
+- [x] Public GitHub repository
+- [x] Lace wallet connect/disconnect via DApp Connector API
+- [x] Circuit called from frontend (createSignal, purchaseSignal)
+- [x] Observable privacy behavior: content hash on-chain, content private
+- [x] Live demo: [nightsignals.vercel.app](https://frontend-h3kdv8y5o-komasubheeksh-2507s-projects.vercel.app)
+- [x] 8+ meaningful commits
+
+### Level 3 — First Quarter
+- [x] Fully functional dApp with Midnight's privacy model
+- [x] 3+ tests passing (13/13)
+- [x] CI/CD pipeline: [GitHub Actions](https://github.com/subheeksh5599/nightsignals/actions)
+- [x] Idea selected: Private Insight Marketplace (unique — not on provided list)
+- [x] Privacy model documented (see [Privacy Model](#privacy-model))
+- [x] 10+ meaningful commits
 
 ---
 
