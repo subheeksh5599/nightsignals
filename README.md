@@ -5,11 +5,12 @@
 ![Midnight](https://img.shields.io/badge/Midnight-Network-000?style=flat-square)
 ![Compact](https://img.shields.io/badge/Compact-0.23-000?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-000?style=flat-square)
-![CI](https://img.shields.io/badge/CI-passing-brightgreen?style=flat-square)
+[![CI](https://github.com/subheeksh5599/nightsignals/actions/workflows/ci.yml/badge.svg)](https://github.com/subheeksh5599/nightsignals/actions)
+![Tests](https://img.shields.io/badge/tests-13/13_passed-brightgreen?style=flat-square)
 
 **Privacy-preserving insight marketplace on Midnight Network**
 
-[Features](#features) · [Architecture](#architecture) · [Privacy Model](#privacy-model) · [Setup](#setup) · [Deploy](#deploy)
+[Live Demo](https://frontend-h3kdv8y5o-komasubheeksh-2507s-projects.vercel.app) · [Features](#features) · [Architecture](#architecture) · [Privacy Model](#privacy-model) · [Setup](#setup) · [Deploy](#deploy)
 
 </div>
 

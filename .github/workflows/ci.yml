@@ -69,3 +69,6 @@ jobs:
 
       - name: TypeScript build check
         run: npm run build
+
+      - name: Run contract verification tests
+        run: npm test
