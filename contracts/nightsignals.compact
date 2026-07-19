@@ -1,0 +1,89 @@
+pragma language_version 0.23;
+
+import CompactStandardLibrary;
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+struct SignalInfo {
+  creator: Bytes<32>,
+  price: Uint<64>,
+  contentHash: Bytes<32>,
+  active: Boolean,
+  buyerCount: Uint<64>,
+}
+
+// ─── Public ledger state ──────────────────────────────────────────────────────
+
+export ledger signals: Map<Uint<64>, SignalInfo>;
+export ledger nextId: Counter;
+
+// ─── Private witness ──────────────────────────────────────────────────────────
+
+witness localSecretKey(): Bytes<32>;
+
+// ─── Helper ───────────────────────────────────────────────────────────────────
+
+export circuit ownerCommitment(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "ns:owner:"), sk]);
+}
+
+// ─── Circuits ─────────────────────────────────────────────────────────────────
+
+// Create a new signal listing. Content is hashed on-chain; raw content stays private.
+export circuit createSignal(
+  price: Uint<64>,
+  content: Bytes<32>
+): [] {
+  const sk = localSecretKey();
+  const creator = ownerCommitment(sk);
+  const disclosedPrice = disclose(price);
+
+  nextId.increment(1);
+  const signalId = nextId.read() as Uint<64>;
+
+  const contentHash = persistentHash<Vector<2, Bytes<32>>>([pad(32, "ns:content:"), content]);
+
+  signals.insert(signalId, SignalInfo {
+    creator: disclose(creator),
+    price: disclosedPrice,
+    contentHash: disclose(contentHash),
+    active: disclose(true),
+    buyerCount: disclose(0 as Uint<64>),
+  });
+}
+
+// Purchase access to a signal. Pays tNIGHT, increments buyer count.
+export circuit purchaseSignal(signalId: Uint<64>): [] {
+  const disclosedId = disclose(signalId);
+  const signal = signals.lookup(disclosedId);
+  assert(signal.active, "Signal not active");
+
+  receiveUnshielded(nativeToken(), signal.price as Uint<128>);
+
+  signals.insert(disclosedId, SignalInfo {
+    creator: signal.creator,
+    price: signal.price,
+    contentHash: signal.contentHash,
+    active: signal.active,
+    buyerCount: (signal.buyerCount + (1 as Uint<64>)) as Uint<64>,
+  });
+}
+
+// Deactivate a signal (creator only).
+export circuit deactivateSignal(signalId: Uint<64>): [] {
+  const sk = localSecretKey();
+  const caller = ownerCommitment(sk);
+  const disclosedId = disclose(signalId);
+  const signal = signals.lookup(disclosedId);
+
+  assert(signal.creator == caller, "Not creator");
+  assert(signal.active, "Already inactive");
+
+  signals.insert(disclosedId, SignalInfo {
+    creator: signal.creator,
+    price: signal.price,
+    contentHash: signal.contentHash,
+    active: disclose(false),
+    buyerCount: signal.buyerCount,
+  });
+}

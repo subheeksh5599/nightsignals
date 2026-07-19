@@ -24,14 +24,14 @@ import { CompiledContract } from '@midnight-ntwrk/midnight-js-protocol/compact-j
 globalThis.WebSocket = WebSocket;
 
 // Must match the privateStateId used at deploy time so the CLI reconnects to
-// the same private state. The hello-world contract has no witnesses (empty state).
-const PRIVATE_STATE_ID = 'helloWorldPrivateState';
+// the same private state. NightSignals uses witnesses for signal content privacy.
+const PRIVATE_STATE_ID = 'nightsignalsPrivateState';
 
 const { network, config: networkConfig } = resolveNetwork();
 const SEED = getOrCreateSeed(network);
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const zkConfigPath = path.resolve(__dirname, '..', 'contracts', 'managed', 'hello-world');
+const zkConfigPath = path.resolve(__dirname, '..', 'contracts', 'managed', 'nightsignals');
 
 // Load compiled contract
 const contractPath = path.join(zkConfigPath, 'contract', 'index.js');
@@ -42,9 +42,9 @@ if (!fs.existsSync(contractPath)) {
   process.exit(1);
 }
 
-const HelloWorld = await import(pathToFileURL(contractPath).href);
+const NightSignals = await import(pathToFileURL(contractPath).href);
 
-const compiledContract = CompiledContract.make('hello-world', HelloWorld.Contract).pipe(
+const compiledContract = CompiledContract.make('nightsignals', NightSignals.Contract).pipe(
   CompiledContract.withVacantWitnesses,
   CompiledContract.withCompiledFileAssets(zkConfigPath),
 );
@@ -80,7 +80,7 @@ async function createProviders(walletCtx: WalletContext) {
 
   return {
     privateStateProvider: levelPrivateStateProvider({
-      privateStateStoreName: 'hello-world-state',
+      privateStateStoreName: 'nightsignals-state',
       accountId,
       privateStoragePasswordProvider: () => privateStatePassword,
     }),
@@ -165,20 +165,26 @@ async function main() {
     let running = true;
     while (running) {
       console.log('─── Menu ───────────────────────────────────────────────────────');
-      console.log('  1. Store a message');
-      console.log('  2. Read current message');
-      console.log('  3. Check wallet balance');
-      console.log('  4. Exit\n');
+      console.log('  1. Create a signal');
+      console.log('  2. List all signals');
+      console.log('  3. Purchase a signal');
+      console.log('  4. Rate a signal');
+      console.log('  5. Deactivate a signal');
+      console.log('  6. Check wallet balance');
+      console.log('  7. Exit\n');
 
       const choice = await rl.question('  Your choice: ');
 
       switch (choice.trim()) {
         case '1': {
-          const message = await rl.question('  Enter your message: ');
+          const priceStr = await rl.question('  Price (tNIGHT): ');
+          const price = BigInt(priceStr);
+          const content = await rl.question('  Signal content (private): ');
           console.log('\n  Submitting transaction (this may take 30-60 seconds)...');
           try {
-            const tx = await deployed.callTx.storeMessage(message);
-            console.log(`\n  ✅ Message stored: "${message}"`);
+            const contentBytes = new TextEncoder().encode(content);
+            const tx = await deployed.callTx.createSignal(price, contentBytes);
+            console.log(`\n  ✅ Signal created!`);
             console.log(`  Transaction ID: ${tx.public.txId}`);
             console.log(`  Block height: ${tx.public.blockHeight}\n`);
           } catch (error) {
@@ -188,15 +194,15 @@ async function main() {
         }
 
         case '2': {
-          console.log('\n  Reading message from blockchain...');
+          console.log('\n  Reading signals from blockchain...');
           try {
             const contractState = await providers.publicDataProvider.queryContractState(deployment.address);
             if (contractState) {
-              const ledgerState = HelloWorld.ledger(contractState.data);
-              const message = Buffer.from(ledgerState.message).toString();
-              console.log(`\n  📋 Current message: "${message}"\n`);
+              const ledgerState = NightSignals.ledger(contractState.data);
+              console.log(`\n  Next ID: ${ledgerState.nextId}`);
+              console.log(`  Signals:`, JSON.stringify(ledgerState.signals, null, 2));
             } else {
-              console.log('\n  📋 No message found (contract state empty)\n');
+              console.log('\n  No signals found (contract state empty)\n');
             }
           } catch (error) {
             console.error('\n  ❌ Failed:', error instanceof Error ? error.message : error);
@@ -205,6 +211,50 @@ async function main() {
         }
 
         case '3': {
+          const signalIdStr = await rl.question('  Signal ID to purchase: ');
+          const signalId = BigInt(signalIdStr);
+          console.log('\n  Submitting purchase transaction...');
+          try {
+            const tx = await deployed.callTx.purchaseSignal(signalId);
+            console.log(`\n  ✅ Signal purchased!`);
+            console.log(`  Transaction ID: ${tx.public.txId}\n`);
+          } catch (error) {
+            console.error('\n  ❌ Failed:', error instanceof Error ? error.message : error);
+          }
+          break;
+        }
+
+        case '4': {
+          const signalIdStr = await rl.question('  Signal ID to rate: ');
+          const signalId = BigInt(signalIdStr);
+          const ratingStr = await rl.question('  Rating (1-5): ');
+          const rating = parseInt(ratingStr);
+          console.log('\n  Submitting rating...');
+          try {
+            const tx = await deployed.callTx.rateSignal(signalId, rating);
+            console.log(`\n  ✅ Signal rated!`);
+            console.log(`  Transaction ID: ${tx.public.txId}\n`);
+          } catch (error) {
+            console.error('\n  ❌ Failed:', error instanceof Error ? error.message : error);
+          }
+          break;
+        }
+
+        case '5': {
+          const signalIdStr = await rl.question('  Signal ID to deactivate: ');
+          const signalId = BigInt(signalIdStr);
+          console.log('\n  Deactivating signal...');
+          try {
+            const tx = await deployed.callTx.deactivateSignal(signalId);
+            console.log(`\n  ✅ Signal deactivated!`);
+            console.log(`  Transaction ID: ${tx.public.txId}\n`);
+          } catch (error) {
+            console.error('\n  ❌ Failed:', error instanceof Error ? error.message : error);
+          }
+          break;
+        }
+
+        case '6': {
           console.log('\n  Checking balance...');
           const currentState = await walletCtx.wallet.waitForSyncedState();
           const currentBalance = currentState.unshielded.balances[unshieldedToken().raw] ?? 0n;
@@ -214,13 +264,13 @@ async function main() {
           break;
         }
 
-        case '4':
+        case '7':
           running = false;
           console.log('\n  👋 Goodbye!\n');
           break;
 
         default:
-          console.log('\n  ❌ Invalid choice. Please enter 1-4.\n');
+          console.log('\n  ❌ Invalid choice. Please enter 1-7.\n');
       }
     }
 
