@@ -2,8 +2,8 @@
   "name": "nightsignals",
   "version": "1.0.0",
   "type": "module",
-  "description": "A Midnight Network application created with create-mn-app",
-  "author": "",
+  "description": "NightSignals — Privacy-preserving insight marketplace on Midnight Network. Built for New Moon to Full: Monthly Moonshots hackathon.",
+  "author": "Subheeksh",
   "license": "MIT",
   "scripts": {
     "compile": "compact compile contracts/nightsignals.compact contracts/managed/nightsignals",
