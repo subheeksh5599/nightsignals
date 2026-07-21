@@ -133,6 +133,36 @@ async function main() {
     console.log('  Could not get synced state, attempting deploy anyway...\n');
   }
 
+  // Register for DUST — needed for ZK proof costs
+  console.log('─── DUST Registration ────────────────────────────\n');
+  try {
+    const dustState = await Rx.firstValueFrom(
+      walletCtx.wallet.state().pipe(
+        Rx.timeout({ first: 15000, with: () => { throw new Error('timeout'); } })
+      )
+    );
+    
+    const unregisteredUtxos = dustState.unshielded.availableCoins.filter(
+      (c: any) => !c.meta?.registeredForDustGeneration,
+    );
+    if (unregisteredUtxos.length > 0) {
+      console.log(`  Registering ${unregisteredUtxos.length} NIGHT UTXOs for DUST...`);
+      const recipe = await walletCtx.wallet.registerNightUtxosForDustGeneration(
+        unregisteredUtxos,
+        walletCtx.unshieldedKeystore.getPublicKey(),
+        (payload: any) => walletCtx.unshieldedKeystore.signData(payload),
+      );
+      const finalized = await walletCtx.wallet.finalizeRecipe(recipe);
+      await walletCtx.wallet.submitTransaction(finalized);
+      console.log('  DUST registration submitted');
+    } else {
+      console.log('  No unregistered UTXOs (wallet may have 0 balance)');
+    }
+  } catch (e: any) {
+    console.log(`  DUST setup note: ${e.message}`);
+  }
+  console.log('');
+
   // Try deploy
   console.log('─── Deploy Contract ──────────────────────────────\n');
   
