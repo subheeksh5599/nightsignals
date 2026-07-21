@@ -122,13 +122,6 @@ async function main() {
     );
     const balance = state.unshielded.balances[unshieldedToken().raw] ?? 0n;
     console.log(`  Balance: ${balance.toLocaleString()} tNight\n`);
-    
-    if (network !== 'undeployed' && balance === 0n) {
-      console.log('  Wallet has no funds. Fund it first, then re-run.');
-      console.log(`  Faucet: ${networkConfig.faucet}`);
-      await walletCtx.wallet.stop();
-      process.exit(1);
-    }
   } catch {
     console.log('  Could not get synced state, attempting deploy anyway...\n');
   }
