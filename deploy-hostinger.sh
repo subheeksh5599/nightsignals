@@ -19,6 +19,13 @@ FACADE="node_modules/@midnight-ntwrk/wallet-sdk-facade/dist/index.js"
 sed -i 's/this.shielded.waitForSyncedState(),//' "$FACADE"
 echo "✓ patched wallet facade"
 
+# 3b. Patch unshielded + dust wallet — accept large sync gap
+UNSHIELDED="node_modules/@midnight-ntwrk/wallet-sdk-unshielded-wallet/dist/UnshieldedWallet.js"
+sed -i 's/waitForSyncedState(allowedGap = 0n)/waitForSyncedState(allowedGap = 100000n)/' "$UNSHIELDED"
+DUST="node_modules/@midnight-ntwrk/wallet-sdk-dust-wallet/dist/DustWallet.js"
+sed -i 's/waitForSyncedState(allowedGap = 0n)/waitForSyncedState(allowedGap = 100000n)/' "$DUST"
+echo "✓ patched sync gaps"
+
 # 4. Restore pre-funded wallet seed
 cat > .midnight-state.json << 'SEEDEOF'
 {
