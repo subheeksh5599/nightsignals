@@ -40,7 +40,14 @@ if (!fs.existsSync(contractPath)) {
 const NightSignals = await import(pathToFileURL(contractPath).href);
 
 const compiledContract = CompiledContract.make('nightsignals', NightSignals.Contract).pipe(
-  CompiledContract.withVacantWitnesses,
+  (self) => {
+    // Provide localSecretKey witness — required by the contract.
+    // Returns 32 zero bytes for deploy (not used during deployment, only circuit calls).
+    const witnesses = {
+      localSecretKey: () => new Uint8Array(32).fill(0),
+    };
+    return CompiledContract.withWitnesses(self, witnesses);
+  },
   CompiledContract.withCompiledFileAssets(zkConfigPath),
 );
 
