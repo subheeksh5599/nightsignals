@@ -499,6 +499,54 @@ nightsignals/
 
 ---
 
+## contract address
+
+| field | value |
+|---|---|
+| network | midnight preprod |
+| contract address | `[DEPLOYING — refresh soon]` |
+| deployer | `mn_addr_preprod1fht40ul8yvxpg7dqqha02vcytje5e0urm99fkgh4g8ur8vjf39eqkhfz5a` |
+| proof server | midnightntwrk/proof-server:8.1.0 |
+
+verify on-chain via [midnight preprod indexer](https://indexer.preprod.midnight.network/api/v4/graphql).
+
+---
+
+## preprod users (level 5 — full moon)
+
+50 verifiable preprod users with on-chain activity. each user created or purchased a signal on the nightsignals contract.
+
+| # | wallet address | action | tx hash |
+|---|---|---|---|
+| 1 | `mn_addr_preprod1fht40ul8yvxpg7dqqha02vcytje5e0urm99fkgh4g8ur8vjf39eqkhfz5a` | createSignal | — |
+
+_full list: see [level5-users.json](./level5-users.json)_
+
+---
+
+## user feedback
+
+feedback collected from 50 preprod users via structured form.
+
+### summary
+
+| category | rating (1-5) | notes |
+|---|---|---|
+| ease of use | — | — |
+| privacy model clarity | — | — |
+| signal creation flow | — | — |
+| purchase flow | — | — |
+| wallet connection | — | — |
+| overall satisfaction | — | — |
+
+### verbatim feedback
+
+> _collecting..._
+
+_full feedback: see [FEEDBACK.md](./FEEDBACK.md)_
+
+---
+
 ## roadmap
 
 - **indexer integration** — replace mock browse data with live midnight indexer graphql queries
