@@ -10,6 +10,7 @@
 ![Tests](https://img.shields.io/badge/tests-13%2F13%20passed-3fb950)
 ![Stack](https://img.shields.io/badge/Compact·Midnight.js%204.1·React%2019·TypeScript-14151a)
 ![Midnight](https://img.shields.io/badge/Midnight-preprod-6C5CE7)
+[![X (Twitter)](https://img.shields.io/badge/X-@NightSignals__mid-1DA1F2)](https://x.com/NightSignals_mid)
 
 ### the insight is proven, not shown.
 
@@ -48,6 +49,8 @@ built for midnight network. MIT licensed.
 - [project layout](#project-layout)
 - [tech stack](#tech-stack)
 - [roadmap](#roadmap)
+- [product vision: confidential credentials](#product-vision-confidential-credentials)
+- [screenshots](#screenshots)
 - [license](#license)
 
 ---
@@ -548,6 +551,56 @@ feedback collected from 50 preprod users via structured form.
 > _collecting..._
 
 _full feedback: see [FEEDBACK.md](./FEEDBACK.md)_
+
+---
+
+## product vision: confidential credentials
+
+nightsignals isn't just a signal marketplace — it's a **confidential credentials** platform. every signal created on nightsignals is a cryptographically verifiable credential: the content hash proves the creator published a specific insight at a specific time, without revealing what that insight was.
+
+### the credential primitive
+
+```
+credential = {
+  issuer:   ZK-derived creator identity (verifiable, pseudonymous)
+  claim:    "I predicted this market movement at this time"
+  proof:    contentHash on midnight chain (immutable, timestamped)
+  content:  private witness (known only to issuer and verified buyers)
+}
+```
+
+### what this enables
+
+| use case | how nightsignals credentials work |
+|---|---|
+| **trading track record** | a creator can prove they called 15 winning signals without revealing their strategy. the hash chain is immutable — no cherry-picking |
+| **analyst reputation** | buyers can verify a creator's claim history on-chain. "did they really call BTC at 72k before it pumped?" — check the timestamped contentHash |
+| **signal whitelisting** | funds and DAOs can whitelist creators whose on-chain credentials meet a threshold — verified accuracy, not follower count |
+| **anti-fraud** | a buyer who receives a fake signal can cryptographically prove fraud: `hash(received) ≠ contentHash` — verifiable by any third party |
+| **zk-attestation marketplace** | the credential model extends beyond trading — research reports, due diligence findings, audit results — any insight where the proof matters more than the content |
+
+### why "confidential credentials"
+
+a credential typically reveals both the issuer and the claim. nightsignals reveals the issuer (ZK identity), the claim's fingerprint (contentHash), and the timestamp (on-chain block) — but **never the claim's content**. this is a new category of credential: one you can verify without reading. midnight's selective disclosure is the only chain primitive that makes this possible.
+
+the insight is proven, not shown. that's the credential.
+
+---
+
+## screenshots
+
+screenshots of the live application are pending — contributions welcome. after the next frontend deploy, run:
+
+```bash
+# capture screenshots for README
+cd frontend && npm run dev
+# open http://localhost:5173 and capture:
+#   1. landing page (dark theme)
+#   2. wallet connection (lace dialog)
+#   3. signal creation form
+#   4. purchase confirmation
+#   5. on-chain verification
+```
 
 ---
 
