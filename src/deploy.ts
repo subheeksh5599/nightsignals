@@ -77,7 +77,12 @@ if (!fs.existsSync(contractPath)) {
 const NightSignals = await import(pathToFileURL(contractPath).href);
 
 const compiledContract = CompiledContract.make('nightsignals', NightSignals.Contract).pipe(
-  CompiledContract.withVacantWitnesses,
+  (self) => {
+    const witnesses = {
+      localSecretKey: () => new Uint8Array(32).fill(0),
+    };
+    return CompiledContract.withWitnesses(self, witnesses);
+  },
   CompiledContract.withCompiledFileAssets(zkConfigPath),
 );
 
@@ -157,7 +162,7 @@ async function main() {
   await persistWalletState(network, walletCtx);
 
   const address = walletCtx.unshieldedKeystore.getBech32Address();
-  let balance = state.unshielded.balances[unshieldedToken().raw] ?? 0n;
+  let balance = state.unshielded?.balances?.[unshieldedToken().raw] ?? 0n;
   console.log(`\n  Wallet Address: ${address}`);
   console.log(`  Balance: ${balance.toLocaleString()} tNight\n`);
 
@@ -176,11 +181,11 @@ async function main() {
   // faucet tx lands).
   if (network !== 'undeployed' && networkConfig.faucet) {
     // Same balance idiom used by check-balance.ts:
-    //   state.unshielded.balances[unshieldedToken().raw] ?? 0n
+    //   state.unshielded?.balances?.[unshieldedToken().raw] ?? 0n
     const initialBalance = await Rx.firstValueFrom(walletCtx.wallet.state().pipe(
       Rx.filter((s) => s.isSynced),
     ));
-    const initialTNight = initialBalance.unshielded.balances[unshieldedToken().raw] ?? 0n;
+    const initialTNight = initialBalance.unshielded?.balances?.[unshieldedToken().raw] ?? 0n;
     if (initialTNight === 0n) {
       console.log('─── Fund Wallet ────────────────────────────────────────────────\n');
       console.log(`  Wallet address: ${address}`);
@@ -193,7 +198,7 @@ async function main() {
       while (true) {
         await new Promise((r) => setTimeout(r, 10_000));
         const s = await Rx.firstValueFrom(walletCtx.wallet.state().pipe(Rx.filter((x) => x.isSynced)));
-        const tn = s.unshielded.balances[unshieldedToken().raw] ?? 0n;
+        const tn = s.unshielded?.balances?.[unshieldedToken().raw] ?? 0n;
         if (tn > 0n) {
           console.log(`\n  Funded! tNIGHT balance: ${tn.toLocaleString()}\n`);
           break;
