@@ -503,12 +503,12 @@ nightsignals/
 
 | field | value |
 |---|---|
-| network | midnight preprod |
-| contract address | `[DEPLOYING — refresh soon]` |
-| deployer | `mn_addr_preprod1fht40ul8yvxpg7dqqha02vcytje5e0urm99fkgh4g8ur8vjf39eqkhfz5a` |
+| network | midnight preview |
+| contract address | `a234fcd8498a793f498185cc35a2e29c4145d3cc61bdd0341eefbab887bfbca3` |
+| deployer | `mn_addr_preview1fht40ul8yvxpg7dqqha02vcytje5e0urm99fkgh4g8ur8vjf39eqkkhj8q` |
 | proof server | midnightntwrk/proof-server:8.1.0 |
 
-verify on-chain via [midnight preprod indexer](https://indexer.preprod.midnight.network/api/v4/graphql).
+verify on-chain via [midnight preview indexer](https://indexer.preview.midnight.network/api/v4/graphql).
 
 ---
 
