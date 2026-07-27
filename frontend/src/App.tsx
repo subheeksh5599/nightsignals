@@ -16,7 +16,7 @@ declare global {
         fromTo: (target: unknown, fromVars: Record<string, unknown>, toVars: Record<string, unknown>, position?: string | number) => unknown;
       };
       matchMedia: () => unknown;
-      context: (fn: (ctx: unknown) => void) => unknown;
+      context: (fn: (ctx: Record<string, unknown>) => void) => { revert: () => void };
     };
     ScrollTrigger?: {
       create: (vars: Record<string, unknown>) => unknown;
@@ -87,6 +87,7 @@ export default function App() {
   const ctaRef = useRef<HTMLDivElement>(null);
   const appRef = useRef<HTMLDivElement>(null);
   const fadeUpRefs = useRef<(HTMLDivElement | null)[]>([]);
+  void fadeUpRefs;
 
   // ── Wallet handlers ───────────────────────────────────────────────────────
 
