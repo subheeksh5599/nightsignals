@@ -2,7 +2,7 @@
 
 &nbsp;
 
-[![Live demo](https://img.shields.io/badge/●_live-nightsignals.vercel.app-6C5CE7)](https://frontend-h3kdv8y5o-komasubheeksh-2507s-projects.vercel.app)
+[![Live demo](https://img.shields.io/badge/●_live-nightsignals.vercel.app-6C5CE7)](https://nightsignals.vercel.app)
 [![Midnight](https://img.shields.io/badge/Midnight-Preprod-14151a)](https://midnight.network)
 [![Compact](https://img.shields.io/badge/Compact-0.23-6C5CE7)](https://docs.midnight.network/compact)
 [![License: MIT](https://img.shields.io/badge/license-MIT-6C5CE7.svg)](LICENSE)
@@ -16,9 +16,9 @@
 
 nightsignals is a privacy-preserving insight marketplace on midnight network. creators sell trading signals, market analysis, and strategy insights — the content hash goes on-chain so buyers can verify authenticity, but the signal content itself stays in a private witness and never touches the public ledger. buyers pay in tnight, the transaction is publicly verifiable, and the creator's real wallet address is hidden behind a ZK-derived identity. built with midnight's selective disclosure model — the chain confirms the trade is valid without ever seeing what was traded.
 
-### ▶ live — browse and create signals at **[nightsignals.vercel.app](https://frontend-h3kdv8y5o-komasubheeksh-2507s-projects.vercel.app)**
+### ▶ live — browse and create signals at **[nightsignals.vercel.app](https://nightsignals.vercel.app)**
 
-**[ live demo ↗ ](https://frontend-h3kdv8y5o-komasubheeksh-2507s-projects.vercel.app)** · **[ architecture ↓ ](#architecture)** · **[ privacy model ↓ ](#privacy-model)** · **[ run it locally ↓ ](#run-it-locally)** · **[ deploy ↓ ](#deploy)**
+**[ live demo ↗ ](https://nightsignals.vercel.app)** · **[ architecture ↓ ](#architecture)** · **[ privacy model ↓ ](#privacy-model)** · **[ run it locally ↓ ](#run-it-locally)** · **[ deploy ↓ ](#deploy)**
 
 built for midnight network. MIT licensed.
 
@@ -417,7 +417,7 @@ cd frontend
 npx vercel --prod
 ```
 
-live at **[nightsignals.vercel.app](https://frontend-h3kdv8y5o-komasubheeksh-2507s-projects.vercel.app)**
+live at **[nightsignals.vercel.app](https://nightsignals.vercel.app)**
 
 ### contracts (midnight preprod)
 
