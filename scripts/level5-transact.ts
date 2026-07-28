@@ -102,7 +102,10 @@ async function main() {
   const { CompiledContract } = await import('@midnight-ntwrk/midnight-js-protocol/compact-js');
 
   const compiledContract = CompiledContract.make('nightsignals', Contract).pipe(
-    CompiledContract.withVacantWitnesses,
+    (self: any) => {
+      const witnesses = { localSecretKey: async () => new Uint8Array(32).fill(0) };
+      return CompiledContract.withWitnesses(self, witnesses);
+    },
     CompiledContract.withCompiledFileAssets(zkConfigPath),
   );
 
@@ -118,14 +121,13 @@ async function main() {
   for (const user of pending) {
     try {
       const content = `Trading insight from ${user.firstName} ${user.lastName}: market analysis for educational purposes only. Generated for NightSignals Level 5 verification.`;
-      const price = BigInt(10); // 10 tNIGHT per signal
 
       // Contract expects Bytes<32> — pad/truncate to exactly 32 bytes
       const contentBytes = new Uint8Array(32);
       new TextEncoder().encode(content).slice(0, 32).forEach((b, i) => { contentBytes[i] = b; });
 
       console.log(`User ${user.index}: creating signal for ${user.firstName} ${user.lastName}...`);
-      const tx = await (deployed as any).callTx.createSignal(price, contentBytes);
+      const tx = await (deployed as any).callTx.createSignal(10n, contentBytes);
       const txHash = tx?.txHash || tx?.hash || 'confirmed';
 
       user.txHash = typeof txHash === 'string' ? txHash : String(txHash);
