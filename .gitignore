@@ -60,3 +60,7 @@ temp/
 .midnight-wallet-state/
 !contracts/managed/
 frontend/dist/
+.midnight-state.json
+.midnight-wallet-state/
+scripts/test-transfer.ts
+scripts/get-address.ts

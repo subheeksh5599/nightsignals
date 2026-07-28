@@ -26,21 +26,26 @@ DUST="node_modules/@midnight-ntwrk/wallet-sdk-dust-wallet/dist/DustWallet.js"
 sed -i 's/waitForSyncedState(allowedGap = 0n)/waitForSyncedState(allowedGap = 100000n)/' "$DUST"
 echo "✓ patched sync gaps"
 
-# 4. Restore pre-funded wallet seed
-cat > .midnight-state.json << 'SEEDEOF'
+# 4. Restore wallet seed (create from env var or use MIDNIGHT_WALLET_SEED)
+if [ -n "$MIDNIGHT_WALLET_SEED" ]; then
+  cat > .midnight-state.json << SEEDEOF
 {
   "version": 1,
   "activeNetwork": "preprod",
   "wallets": {
     "preprod": {
-      "seed": "bea9721e8cf013c572fac344dc39222f2e3c1eb9eb3cc6c246818b67d8f60d35",
-      "createdAt": "2026-07-21T08:00:00.000Z"
+      "seed": "$MIDNIGHT_WALLET_SEED",
+      "createdAt": "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)"
     }
   },
   "deployments": {}
 }
 SEEDEOF
-echo "✓ wallet seed restored"
+  echo "✓ wallet seed restored from MIDNIGHT_WALLET_SEED"
+else
+  echo "⚠ Set MIDNIGHT_WALLET_SEED env var to your wallet seed"
+  exit 1
+fi
 
 # 5. Start proof server
 docker compose up -d --wait proof-server
