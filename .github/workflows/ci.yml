@@ -12,24 +12,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
+        with: { node-version: '22' }
       - name: Install Compact compiler
         run: |
           curl --proto '=https' --tlsv1.2 -LsSf https://github.com/midnightntwrk/compact/releases/latest/download/compact-installer.sh | sh
           echo "$HOME/.local/bin" >> $GITHUB_PATH
           compact update
-
       - name: Install dependencies
         run: npm install
-
       - name: Compile Compact contract
         run: npm run compile
-
       - name: Upload managed artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -41,21 +35,16 @@ jobs:
     needs: compile
     steps:
       - uses: actions/checkout@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
+        with: { node-version: '22' }
       - name: Install dependencies
         run: npm install
-
       - name: Download managed artifacts
         uses: actions/download-artifact@v4
         with:
           name: nightsignals-managed
           path: contracts/managed/
-
       - name: Run contract verification tests
         run: npm test
 
@@ -64,48 +53,32 @@ jobs:
     needs: test
     steps:
       - uses: actions/checkout@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
+        with: { node-version: '22' }
       - name: Install frontend dependencies
         run: cd frontend && npm install
-
       - name: Build frontend
         run: cd frontend && npm run build
-
-      - name: Check build output
-        run: |
-          echo "=== Frontend build output ==="
-          ls -la frontend/out/
-          echo ""
-          echo "=== HTML files ==="
-          find frontend/out -name "*.html" -exec echo {} \;
-          echo ""
-          echo "=== Build size ==="
-          du -sh frontend/out/
 
   deploy:
     runs-on: ubuntu-latest
     needs: frontend
     if: github.ref == 'refs/heads/master'
+    environment:
+      name: production
+      url: https://nightsignals.vercel.app
     steps:
       - uses: actions/checkout@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
+        with: { node-version: '22' }
       - name: Install frontend dependencies
         run: cd frontend && npm install
-
       - name: Build frontend
         run: cd frontend && npm run build
-
       - name: Deploy to Vercel
+        id: vercel
         uses: amondnet/vercel-action@v25
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
