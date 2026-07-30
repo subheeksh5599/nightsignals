@@ -21,11 +21,14 @@ export default function HomePage() {
     try {
       const wallets = listWallets();
       if (!wallets.length) {
-        setWallet(w => ({ ...w, error: 'Lace wallet not detected. Is the Lace extension installed and unlocked? Open Lace and make sure you are on Midnight Preprod network.' }));
+        setWallet(w => ({ ...w, error: 'Lace wallet not detected.\n\nMake sure:\n1. Lace is installed and unlocked\n2. You are on Midnight Preprod network in Lace\n3. Refresh this page' }));
         setConnecting(false);
         return;
       }
-      const api = await connectWallet(wallets[0].key);
+      // Use the first available wallet (Lace typically registers as 'lace' or its rdns)
+      const walletKey = wallets[0].key;
+      console.log('Connecting to wallet:', wallets[0].name, 'key:', walletKey);
+      const api = await connectWallet(walletKey);
       const pk = await api.getCoinPublicKey();
       setWallet({ isConnected: true, address: pk.slice(0, 12) + '...' + pk.slice(-6), coinPublicKey: pk, error: null });
     } catch (err: unknown) {
@@ -473,7 +476,7 @@ const css = `
   .btn-outline-lg:hover { border-color: var(--text3); }
   .btn-primary:disabled, .btn-primary-lg:disabled { opacity: 0.6; cursor: not-allowed; }
   .btn-ghost-sm { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: transparent; color: var(--text2); font-size: 12px; font-weight: 500; cursor: pointer; font-family: inherit; }
-  .nav-error { font-size: 11px; color: #ff5f56; max-width: 200px; line-height: 1.4; }
+  .nav-error { font-size: 11px; color: #ff5f56; max-width: 240px; line-height: 1.5; white-space: pre-line; }
   .hero-error { font-size: 14px; color: #ff5f56; margin-top: 12px; }
   .cta-error { font-size: 14px; color: #ff5f56; margin-top: 12px; }
 
