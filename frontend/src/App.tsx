@@ -1490,3 +1490,4 @@ const s: Record<string, React.CSSProperties> = {
   },
 };
 // add loading spinner during wallet connection
+// prevent double-submit on signal creation form
