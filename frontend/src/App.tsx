@@ -1489,3 +1489,4 @@ const s: Record<string, React.CSSProperties> = {
     textDecoration: "none",
   },
 };
+// add loading spinner during wallet connection
