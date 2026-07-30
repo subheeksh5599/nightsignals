@@ -1491,3 +1491,4 @@ const s: Record<string, React.CSSProperties> = {
 };
 // add loading spinner during wallet connection
 // prevent double-submit on signal creation form
+// add aria-labels to wallet connect/disconnect butto
