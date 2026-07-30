@@ -1494,3 +1494,4 @@ const s: Record<string, React.CSSProperties> = {
 // add aria-labels to wallet connect/disconnect butto
 // validate signal price input rejects negative value
 // truncate long wallet address display properly
+// handle empty signal list gracefully in browse tab
