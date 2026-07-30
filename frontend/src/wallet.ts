@@ -28,3 +28,4 @@ export async function connectWallet(wallet: InitialAPI): Promise<API> {
 }
 // handle lace wallet disconnect gracefully on page u
 // retry wallet connection up to 3 times on transient
+// clear stale wallet state when switching networks
