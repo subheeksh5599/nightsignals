@@ -1493,3 +1493,4 @@ const s: Record<string, React.CSSProperties> = {
 // prevent double-submit on signal creation form
 // add aria-labels to wallet connect/disconnect butto
 // validate signal price input rejects negative value
+// truncate long wallet address display properly
