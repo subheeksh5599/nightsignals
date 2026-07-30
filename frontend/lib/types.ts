@@ -7,5 +7,5 @@ export interface WalletState {
 
 export interface API {
   getCoinPublicKey: () => Promise<string>;
-  connected?: any;
+  connected?: any; // Full MidnightConnectedAPI from Lace
 }

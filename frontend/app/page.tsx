@@ -74,7 +74,7 @@ export default function HomePage() {
     setSignals(prev => [newSignal, ...prev]);
     setCreatePrice(''); setCreateContent('');
     setActiveTab('browse');
-    showToast('Signal created. It will appear on-chain after the transaction confirms.');
+    showToast('Signal created. Lace would sign the ZK circuit call.');
     setCreateLoading(false);
   };
 
@@ -83,7 +83,7 @@ export default function HomePage() {
     await new Promise(r => setTimeout(r, 1200));
     setSignals(prev => prev.map(s => s.id === signalId ? { ...s, buyerCount: s.buyerCount + 1 } : s));
     setPurchasing(null);
-    showToast('Signal purchased. Check your wallet for the transaction.');
+    showToast('Signal purchased. Lace would sign the ZK circuit call.');
   };
 
   useEffect(() => {
