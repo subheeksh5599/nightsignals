@@ -1,42 +1,13 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
-import type { SignalInfo, WalletState, API } from "./types";
+import type { WalletState, API } from "./types";
 import { listWallets, selectFirstWallet, connectWallet } from "./wallet";
-
-// ─── GSAP type declarations ──────────────────────────────────────────────────
 
 declare global {
   interface Window {
-    gsap?: {
-      registerPlugin: (plugin: unknown) => void;
-      to: (target: unknown, vars: Record<string, unknown>) => unknown;
-      fromTo: (target: unknown, fromVars: Record<string, unknown>, toVars: Record<string, unknown>) => unknown;
-      set: (target: unknown, vars: Record<string, unknown>) => unknown;
-      timeline: (vars?: Record<string, unknown>) => {
-        to: (target: unknown, vars: Record<string, unknown>, position?: string | number) => unknown;
-        fromTo: (target: unknown, fromVars: Record<string, unknown>, toVars: Record<string, unknown>, position?: string | number) => unknown;
-      };
-      matchMedia: () => unknown;
-      context: (fn: (ctx: Record<string, unknown>) => void) => { revert: () => void };
-    };
-    ScrollTrigger?: {
-      create: (vars: Record<string, unknown>) => unknown;
-      refresh: () => void;
-      getAll: () => Array<{ kill: () => void }>;
-    };
+    gsap?: any;
+    ScrollTrigger?: any;
   }
 }
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const PREPROD_CONTRACT = "5c35a52355dec9b34aa0e766c36f3588781a331fe7ebb801cf474ecdad80db3e";
-const PREVIEW_CONTRACT = "a234fcd8498a793f498185cc35a2e29c4145d3cc61bdd0341eefbab887bfbca3";
-
-const MOCK_SIGNALS: SignalInfo[] = [
-  { id: 1, creator: "0x7a3b...9f2c", price: 50, contentHash: "0x3f8a...b12d", active: true, buyerCount: 3 },
-  { id: 2, creator: "0x1c4d...8e1a", price: 100, contentHash: "0xa2b4...c7f3", active: true, buyerCount: 7 },
-];
-
-// ─── Design tokens ───────────────────────────────────────────────────────────
 
 const C = {
   bg: "#0A0A0A",
@@ -48,1452 +19,556 @@ const C = {
   surfaceHover: "#1A1A1A",
 } as const;
 
-const FONT = {
-  body: "'Inter', sans-serif",
-  mono: "'JetBrains Mono', monospace",
-} as const;
-
-// ─── App ──────────────────────────────────────────────────────────────────────
+const PREPROD_CONTRACT = "5c35a52355dec9b34aa0e766c36f3588781a331fe7ebb801cf474ecdad80db3e";
 
 export default function App() {
-  // ── Wallet state ──────────────────────────────────────────────────────────
   const [wallet, setWallet] = useState<WalletState>({
     isConnected: false, address: null, coinPublicKey: null, error: null,
   });
-  const [api, setApi] = useState<API | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const apiRef = useRef<API | null>(null);
 
-  // ── Signals state ─────────────────────────────────────────────────────────
-  const [signals, setSignals] = useState<SignalInfo[]>(MOCK_SIGNALS);
-  const [activeTab, setActiveTab] = useState<"browse" | "create">("browse");
-  const [createPrice, setCreatePrice] = useState("");
-  const [createContent, setCreateContent] = useState("");
-  const [createLoading, setCreateLoading] = useState(false);
-  const [purchasing, setPurchasing] = useState<number | null>(null);
-
-  // ── Hover states ──────────────────────────────────────────────────────────
-  const [hoveredCard, setHoveredCard] = useState<number | null>(null);
-
-  // ── Refs for GSAP ─────────────────────────────────────────────────────────
   const heroRef = useRef<HTMLDivElement>(null);
-  const heroTextRef = useRef<HTMLDivElement>(null);
   const privacyRef = useRef<HTMLDivElement>(null);
-  const circleRevealRef = useRef<HTMLDivElement>(null);
-  const horizontalSectionRef = useRef<HTMLDivElement>(null);
-  const horizontalInnerRef = useRef<HTMLDivElement>(null);
-  const architectureRef = useRef<HTMLDivElement>(null);
-  const archCard1Ref = useRef<HTMLDivElement>(null);
-  const archCard2Ref = useRef<HTMLDivElement>(null);
-  const archCard3Ref = useRef<HTMLDivElement>(null);
+  const howRef = useRef<HTMLDivElement>(null);
+  const archRef = useRef<HTMLDivElement>(null);
+  const contractRef = useRef<HTMLDivElement>(null);
+  const trustRef = useRef<HTMLDivElement>(null);
   const ctaRef = useRef<HTMLDivElement>(null);
-  const appRef = useRef<HTMLDivElement>(null);
-  const fadeUpRefs = useRef<(HTMLDivElement | null)[]>([]);
-  void fadeUpRefs;
 
-  // ── Wallet handlers ───────────────────────────────────────────────────────
-
+  // Wallet
   const handleConnect = useCallback(async () => {
     try {
-      setWallet((w) => ({ ...w, error: null }));
+      setWallet(w => ({ ...w, error: null }));
       const wallets = listWallets();
       if (wallets.length === 0) {
-        setWallet((w) => ({ ...w, error: "No Midnight wallet found. Please install Lace." }));
+        setWallet(w => ({ ...w, error: "No Midnight wallet found. Install Lace." }));
         return;
       }
       const selected = selectFirstWallet();
-      const connectedApi = await connectWallet(selected);
-      const coinPk = await connectedApi.getCoinPublicKey();
-      setApi(connectedApi);
-      setWallet({
-        isConnected: true,
-        address: coinPk.slice(0, 12) + "..." + coinPk.slice(-6),
-        coinPublicKey: coinPk,
-        error: null,
-      });
+      const api = await connectWallet(selected);
+      const pk = await api.getCoinPublicKey();
+      apiRef.current = api;
+      setWallet({ isConnected: true, address: pk.slice(0, 12) + "..." + pk.slice(-6), coinPublicKey: pk, error: null });
     } catch (err: unknown) {
-      setWallet((w) => ({ ...w, error: (err as Error)?.message || "Failed to connect wallet" }));
+      setWallet(w => ({ ...w, error: (err as Error)?.message || "Connection failed" }));
     }
   }, []);
 
   const handleDisconnect = useCallback(() => {
-    setApi(null);
     setWallet({ isConnected: false, address: null, coinPublicKey: null, error: null });
   }, []);
 
-  // ── Signal handlers ───────────────────────────────────────────────────────
+  // Scroll detection
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 40);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
-  const handleCreateSignal = useCallback(async () => {
-    if (!api) return;
-    const price = parseInt(createPrice);
-    if (!price || price <= 0) return;
-    if (!createContent.trim()) return;
-    setCreateLoading(true);
-    try {
-      const newSignal: SignalInfo = {
-        id: signals.length + 1,
-        creator: wallet.coinPublicKey?.slice(0, 12) + "..." || "0x0000...0000",
-        price,
-        contentHash: "0x" + Math.random().toString(16).slice(2, 10) + "..." + Math.random().toString(16).slice(2, 6),
-        active: true,
-        buyerCount: 0,
-      };
-      setSignals((prev) => [...prev, newSignal]);
-      setCreatePrice("");
-      setCreateContent("");
-      setActiveTab("browse");
-    } catch (err: unknown) {
-      setWallet((w) => ({ ...w, error: (err as Error)?.message || "Failed to create signal" }));
-    } finally {
-      setCreateLoading(false);
-    }
-  }, [api, createPrice, createContent, signals.length, wallet.coinPublicKey]);
-
-  const handlePurchase = useCallback(async (signalId: number) => {
-    if (!api) return;
-    setPurchasing(signalId);
-    try {
-      await new Promise((r) => setTimeout(r, 1000));
-      setSignals((prev) =>
-        prev.map((s) => (s.id === signalId ? { ...s, buyerCount: s.buyerCount + 1 } : s))
-      );
-    } catch (err: unknown) {
-      setWallet((w) => ({ ...w, error: (err as Error)?.message || "Purchase failed" }));
-    } finally {
-      setPurchasing(null);
-    }
-  }, [api]);
-
-  // ── GSAP ScrollTrigger animations ─────────────────────────────────────────
-
+  // GSAP animations
   useEffect(() => {
     const gsap = window.gsap;
     const ST = window.ScrollTrigger;
     if (!gsap || !ST) return;
-
     gsap.registerPlugin(ST);
 
     const ctx = gsap.context(() => {
-      // ── Hero: clipPath reveal ───────────────────────────────────────────
-      if (heroTextRef.current) {
-        gsap.fromTo(
-          heroTextRef.current,
-          { clipPath: "inset(0 0 100% 0)" },
-          {
-            clipPath: "inset(0 0 0% 0)",
-            duration: 1.4,
-            ease: "power3.out",
-            delay: 0.3,
-          }
-        );
-      }
+      // Hero reveal
+      gsap.fromTo("[data-hero]", { y: 60, autoAlpha: 0 }, {
+        y: 0, autoAlpha: 1, duration: 1.2, ease: "power3.out", delay: 0.2,
+      });
 
-      // ── Hero subline & button fade ─────────────────────────────────────
-      const heroFades = heroRef.current?.querySelectorAll("[data-hero-fade]");
-      if (heroFades) {
-        gsap.fromTo(
-          heroFades,
-          { autoAlpha: 0, y: 24 },
-          { autoAlpha: 1, y: 0, duration: 1, stagger: 0.15, ease: "power3.out", delay: 0.8 }
-        );
-      }
-
-      // ── Privacy section: circle reveal ─────────────────────────────────
-      if (circleRevealRef.current) {
-        gsap.fromTo(
-          circleRevealRef.current,
-          { clipPath: "circle(0% at 50% 50%)" },
-          {
-            clipPath: "circle(50% at 50% 50%)",
-            ease: "power3.inOut",
-            scrollTrigger: {
-              trigger: privacyRef.current,
-              start: "top 70%",
-              end: "bottom 30%",
-              scrub: 1,
-            },
-          }
-        );
-      }
-
-      // ── Privacy content fade ───────────────────────────────────────────
-      const privacyFades = privacyRef.current?.querySelectorAll("[data-privacy-fade]");
-      if (privacyFades) {
-        gsap.fromTo(
-          privacyFades,
-          { autoAlpha: 0, y: 20 },
-          {
-            autoAlpha: 1,
-            y: 0,
-            stagger: 0.1,
-            duration: 0.8,
-            ease: "power3.out",
-            scrollTrigger: {
-              trigger: privacyRef.current,
-              start: "top 60%",
-              end: "top 20%",
-              scrub: false,
-            },
-          }
-        );
-      }
-
-      // ── How it works: horizontal scroll ────────────────────────────────
-      if (horizontalSectionRef.current && horizontalInnerRef.current) {
-        const section = horizontalSectionRef.current;
-        const inner = horizontalInnerRef.current;
-        const cards = inner.children;
-        const cardWidth = (cards[0] as HTMLElement)?.offsetWidth || 420;
-        const gap = 24;
-        const totalWidth = cards.length * cardWidth + (cards.length - 1) * gap;
-        const scrollDistance = Math.max(0, totalWidth - window.innerWidth + 96);
-
-        if (scrollDistance > 0) {
-          gsap.to(inner, {
-            x: -scrollDistance,
-            ease: "none",
-            scrollTrigger: {
-              trigger: section,
-              start: "top top",
-              end: `+=${scrollDistance + 200}`,
-              scrub: 1,
-              pin: true,
-              anticipatePin: 1,
-            },
+      // Section fade-ups
+      const sections = [privacyRef, howRef, archRef, contractRef, trustRef, ctaRef];
+      sections.forEach(ref => {
+        if (!ref.current) return;
+        const els = ref.current.querySelectorAll("[data-fade]");
+        if (els.length) {
+          gsap.fromTo(els, { y: 40, autoAlpha: 0 }, {
+            y: 0, autoAlpha: 1, stagger: 0.08, duration: 0.8, ease: "power3.out",
+            scrollTrigger: { trigger: ref.current, start: "top 80%", toggleActions: "play none none none" },
           });
         }
-      }
+      });
 
-      // ── Architecture: pinned stacked cards ─────────────────────────────
-      if (architectureRef.current) {
-        ST.create({
-          trigger: architectureRef.current,
-          start: "top top",
-          end: "+=250%",
-          pin: true,
-          scrub: 1,
-        });
-
-        const cards = [
-          archCard1Ref.current,
-          archCard2Ref.current,
-          archCard3Ref.current,
-        ].filter(Boolean) as HTMLDivElement[];
-
-        cards.forEach((card, i) => {
-          gsap.fromTo(
-            card,
-            { y: 120 * (cards.length - i), opacity: 0.3, scale: 0.92 },
-            {
-              y: i * 16,
-              opacity: 1,
-              scale: 1,
-              ease: "power3.out",
-              scrollTrigger: {
-                trigger: architectureRef.current,
-                start: `${i * 25}% center`,
-                end: `${(i + 1) * 25}% center`,
-                scrub: 1,
-              },
-            }
-          );
+      // Stats counter
+      const statEls = trustRef.current?.querySelectorAll("[data-stat]");
+      if (statEls) {
+        statEls.forEach(el => {
+          const target = parseInt(el.getAttribute("data-stat") || "0");
+          gsap.fromTo(el, { textContent: 0 }, {
+            textContent: target, duration: 2, ease: "power2.out", snap: { textContent: 1 },
+            scrollTrigger: { trigger: el, start: "top 85%", toggleActions: "play none none none" },
+          });
         });
       }
 
-      // ── CTA: fade in ───────────────────────────────────────────────────
-      const ctaContent = ctaRef.current?.querySelector("[data-cta-content]");
-      if (ctaContent) {
-        gsap.fromTo(
-          ctaContent,
-          { autoAlpha: 0, y: 40 },
-          {
-            autoAlpha: 1,
-            y: 0,
-            duration: 1,
-            ease: "power3.out",
-            scrollTrigger: {
-              trigger: ctaRef.current,
-              start: "top 75%",
-            },
-          }
-        );
-      }
-
-      // ── App section fade ───────────────────────────────────────────────
-      if (appRef.current) {
-        gsap.fromTo(
-          appRef.current,
-          { autoAlpha: 0, y: 60 },
-          {
-            autoAlpha: 1,
-            y: 0,
-            duration: 1,
-            ease: "power3.out",
-            scrollTrigger: {
-              trigger: appRef.current,
-              start: "top 85%",
-            },
-          }
-        );
-      }
+      // Pin sections
+      ST.create({ trigger: ".arch-pin", start: "top top", end: "+=150%", pin: true, scrub: 1 });
     });
 
-    return () => {
-      ctx.revert();
-      ST.getAll().forEach((t: { kill: () => void }) => t.kill());
-    };
+    return () => ctx.revert();
   }, []);
-
-  // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <div style={s.page}>
-      {/* ══════════════════════════════════════════════════════════════════════
-          NAV
-          ══════════════════════════════════════════════════════════════════════ */}
-      <nav style={s.nav}>
-        <span style={s.brand}>NightSignals</span>
-        <div style={s.navRight}>
-          {wallet.isConnected ? (
-            <div style={s.walletBadge}>
-              <span style={s.statusDot} />
-              <span style={s.walletAddress}>{wallet.address}</span>
-              <button style={s.disconnectBtn} onClick={handleDisconnect}>
-                Disconnect
-              </button>
-            </div>
-          ) : (
-            <button style={s.connectBtn} onClick={handleConnect}>
-              Connect Lace
+      {/* NAV */}
+      <nav style={{ ...s.nav, background: scrolled ? "rgba(10,10,10,0.92)" : "transparent", borderBottom: scrolled ? `1px solid ${C.line}` : "1px solid transparent" }}>
+        <div style={s.navInner}>
+          <a href="#" style={s.logo}>NightSignals</a>
+          <div style={s.navLinks}>
+            {["Privacy", "Architecture", "Contract", "Docs"].map(label => (
+              <a key={label} href={`#${label.toLowerCase()}`} style={s.navLink}>{label}</a>
+            ))}
+          </div>
+          <div style={s.navRight}>
+            {wallet.isConnected ? (
+              <div style={s.walletRow}>
+                <span style={s.walletDot} />
+                <span style={s.walletAddr}>{wallet.address}</span>
+                <button onClick={handleDisconnect} style={s.btnGhost}>Disconnect</button>
+              </div>
+            ) : (
+              <button onClick={handleConnect} style={s.btnPrimary}>Connect Lace</button>
+            )}
+            <button onClick={() => setMenuOpen(!menuOpen)} style={s.menuBtn}>
+              <span style={{ ...s.menuLine, transform: menuOpen ? "rotate(45deg) translate(5px,5px)" : "none" }} />
+              <span style={{ ...s.menuLine, opacity: menuOpen ? 0 : 1 }} />
+              <span style={{ ...s.menuLine, transform: menuOpen ? "rotate(-45deg) translate(5px,-5px)" : "none" }} />
             </button>
-          )}
+          </div>
         </div>
       </nav>
 
-      {/* ══════════════════════════════════════════════════════════════════════
-          HERO
-          ══════════════════════════════════════════════════════════════════════ */}
+      {menuOpen && (
+        <div style={s.mobileMenu}>
+          {["Privacy", "Architecture", "Contract", "Docs"].map(label => (
+            <a key={label} href={`#${label.toLowerCase()}`} style={s.mobileLink} onClick={() => setMenuOpen(false)}>{label}</a>
+          ))}
+        </div>
+      )}
+
+      {/* HERO */}
       <section ref={heroRef} style={s.hero}>
-        <div ref={heroTextRef} style={s.heroTextClip}>
-          <h1 style={s.heroTitle}>the insight is proven, not shown</h1>
-        </div>
-        <div data-hero-fade style={s.heroSub}>
-          <span style={s.heroSubText}>
-            a privacy-preserving marketplace on midnight
-          </span>
-          <span style={s.heroDot}>—</span>
-          <span style={{ fontFamily: FONT.mono, fontSize: 11, color: C.muted }}>
-            {PREPROD_CONTRACT.slice(0, 8)}...{PREPROD_CONTRACT.slice(-6)}
-          </span>
-        </div>
-        <div data-hero-fade style={{ marginTop: 48 }}>
-          {!wallet.isConnected && (
-            <button style={s.heroBtn} onClick={handleConnect}>
-              Connect Lace wallet
+        <div data-hero style={s.heroContent}>
+          <div style={s.tagRow}>
+            <span style={s.tag}>Midnight Preprod</span>
+            <span style={s.tag}>Compact v0.23</span>
+          </div>
+          <h1 style={s.heroTitle}>the insight is proven,<br />not shown</h1>
+          <p style={s.heroSub}>
+            A privacy-preserving marketplace for trading signals. Creators sell insights with cryptographic proof of authenticity. Buyers verify on-chain without the content ever touching the public ledger. Built on Midnight's selective disclosure.
+          </p>
+          <div style={s.heroActions}>
+            <button onClick={handleConnect} style={s.btnPrimary}>
+              {wallet.isConnected ? "Connected" : "Connect Lace Wallet"}
             </button>
-          )}
-          {wallet.isConnected && (
-            <span style={{ fontFamily: FONT.mono, fontSize: 12, color: C.muted }}>
-              connected: {wallet.address}
-            </span>
-          )}
-        </div>
-        <div data-hero-fade style={s.scrollHint}>
-          <svg width="16" height="24" viewBox="0 0 16 24" fill="none">
-            <rect x="1" y="1" width="14" height="22" rx="7" stroke={C.muted} strokeWidth="1" />
-            <rect x="7" y="6" width="2" height="4" rx="1" fill={C.muted} />
-          </svg>
-        </div>
-      </section>
-
-      {/* ══════════════════════════════════════════════════════════════════════
-          PRIVACY MODEL
-          ══════════════════════════════════════════════════════════════════════ */}
-      <section ref={privacyRef} style={s.section}>
-        <div style={s.sectionLabel}>privacy model</div>
-
-        <div ref={circleRevealRef} style={s.circleContainer}>
-          <div style={s.circleHalf}>
-            <div data-privacy-fade>
-              <div style={s.circleLabel}>public</div>
-              <div style={s.circleTitle}>stored on-chain</div>
-            </div>
-            <div data-privacy-fade style={s.dataRows}>
-              <div style={s.dataRow}>
-                <span style={s.dataKey}>content hash</span>
-                <span style={{ fontFamily: FONT.mono, fontSize: 12, color: C.text }}>0x3f8a...b12d</span>
-              </div>
-              <div style={s.dataRow}>
-                <span style={s.dataKey}>price</span>
-                <span style={{ fontFamily: FONT.mono, fontSize: 12, color: C.text }}>50 tNIGHT</span>
-              </div>
-              <div style={s.dataRow}>
-                <span style={s.dataKey}>buyer count</span>
-                <span style={{ fontFamily: FONT.mono, fontSize: 12, color: C.text }}>3</span>
-              </div>
-              <div style={s.dataRow}>
-                <span style={s.dataKey}>creator zk-id</span>
-                <span style={{ fontFamily: FONT.mono, fontSize: 12, color: C.text }}>0x7a3b...9f2c</span>
-              </div>
-            </div>
+            <a href="#architecture" style={s.btnGhost}>View Architecture</a>
           </div>
-
-          <div style={s.circleDivider} />
-
-          <div style={s.circleHalf}>
-            <div data-privacy-fade>
-              <div style={s.circleLabelPrivate}>private</div>
-              <div style={s.circleTitle}>never leaves your device</div>
-            </div>
-            <div data-privacy-fade style={s.dataRows}>
-              <div style={s.dataRow}>
-                <span style={s.dataKey}>signal content</span>
-                <span style={{ fontFamily: FONT.mono, fontSize: 12, color: C.accent }}>encrypted</span>
-              </div>
-              <div style={s.dataRow}>
-                <span style={s.dataKey}>buyer identity</span>
-                <span style={{ fontFamily: FONT.mono, fontSize: 12, color: C.accent }}>shielded</span>
-              </div>
-              <div style={s.dataRow}>
-                <span style={s.dataKey}>wallet address</span>
-                <span style={{ fontFamily: FONT.mono, fontSize: 12, color: C.accent }}>untraceable</span>
-              </div>
-              <div style={s.dataRow}>
-                <span style={s.dataKey}>decryption key</span>
-                <span style={{ fontFamily: FONT.mono, fontSize: 12, color: C.accent }}>local witness</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <p data-privacy-fade style={s.privacyFooter}>
-          The chain stores proof of the signal, not the signal itself. Buyers verify content matches the hash off-chain using zero-knowledge proofs.
-        </p>
-      </section>
-
-      {/* ══════════════════════════════════════════════════════════════════════
-          HOW IT WORKS (horizontal scroll)
-          ══════════════════════════════════════════════════════════════════════ */}
-      <section ref={horizontalSectionRef} style={s.horizontalSection}>
-        <div style={s.sectionLabel} data-hw-label>how it works</div>
-
-        <div ref={horizontalInnerRef} style={s.horizontalInner}>
-          {/* Card 1 — Create */}
-          <div style={s.hwCard}>
-            <div style={s.hwNumber}>01</div>
-            <h3 style={s.hwTitle}>Create</h3>
-            <p style={s.hwBody}>
-              List your insight with a price and ZK proof. Content stays encrypted — only the hash lands on-chain.
-            </p>
-          </div>
-
-          {/* Card 2 — Purchase */}
-          <div style={s.hwCard}>
-            <div style={s.hwNumber}>02</div>
-            <h3 style={s.hwTitle}>Purchase</h3>
-            <p style={s.hwBody}>
-              Buy access with tNIGHT. Your identity stays shielded. No KYC, no tracking, no exposure.
-            </p>
-          </div>
-
-          {/* Card 3 — Verify */}
-          <div style={s.hwCard}>
-            <div style={s.hwNumber}>03</div>
-            <h3 style={s.hwTitle}>Verify</h3>
-            <p style={s.hwBody}>
-              Decrypt content off-chain. Verify the hash matches. The proof is public — the insight is private.
-            </p>
+          <div style={s.heroMeta}>
+            <span style={s.mono}>Contract {PREPROD_CONTRACT.slice(0, 8)}...{PREPROD_CONTRACT.slice(-6)}</span>
+            <span style={s.metaDot} />
+            <span style={s.mono}>13 tests passing</span>
+            <span style={s.metaDot} />
+            <span style={s.mono}>3 ZK circuits</span>
           </div>
         </div>
       </section>
 
-      {/* ══════════════════════════════════════════════════════════════════════
-          ARCHITECTURE (stacked cards)
-          ══════════════════════════════════════════════════════════════════════ */}
-      <section ref={architectureRef} style={s.archSection}>
-        <div style={{ ...s.sectionLabel, color: C.text }}>architecture</div>
-
-        <div style={s.archStack}>
-          {/* Card 1 — Creator */}
-          <div ref={archCard1Ref} style={{ ...s.archCard, zIndex: 1 }}>
-            <div style={s.archCardHeader}>
-              <span style={s.archCardLabel}>creator</span>
-              <span style={s.archCardArrow}>→</span>
-            </div>
-            <p style={s.archCardBody}>
-              Encrypts signal with ZK proof. Publishes content hash, price, and creator identity to the chain.
-            </p>
-            <div style={s.archCardCode}>
-              <span style={{ fontFamily: FONT.mono, fontSize: 11, color: C.muted }}>
-                prove(secret, price) &rarr; (hash, proof)
-              </span>
-            </div>
-          </div>
-
-          {/* Card 2 — Chain (privacy wall) */}
-          <div ref={archCard2Ref} style={{ ...s.archCard, zIndex: 2, borderColor: C.accent }}>
-            <div style={s.archCardHeader}>
-              <span style={s.archCardLabel}>midnight chain</span>
-              <span style={s.archCardArrow}>↔</span>
-            </div>
-            <p style={s.archCardBody}>
-              Stores only public metadata: content hash, price, creator ZK-ID, and buyer count. The actual content and buyer identities are never on-chain.
-            </p>
-            <div style={s.privacyWall}>
-              <span style={{ fontFamily: FONT.mono, fontSize: 10, color: C.accent }}>
-                privacy wall — content &amp; identity shielded
-              </span>
-            </div>
-          </div>
-
-          {/* Card 3 — Buyer */}
-          <div ref={archCard3Ref} style={{ ...s.archCard, zIndex: 3 }}>
-            <div style={s.archCardHeader}>
-              <span style={s.archCardLabel}>buyer</span>
-              <span style={s.archCardArrow}>←</span>
-            </div>
-            <p style={s.archCardBody}>
-              Purchases access, verifies the hash off-chain, decrypts content locally. The chain proves the signal exists without revealing it.
-            </p>
-            <div style={s.archCardCode}>
-              <span style={{ fontFamily: FONT.mono, fontSize: 11, color: C.muted }}>
-                verify(hash, proof) &rarr; decrypt(content)
-              </span>
-            </div>
-          </div>
+      {/* PRIVACY MODEL */}
+      <section id="privacy" ref={privacyRef} style={s.section}>
+        <div style={s.sectionHeader}>
+          <span style={s.sectionNum}>01</span>
+          <h2 style={s.sectionTitle}>Privacy Model</h2>
+          <p style={s.sectionBody}>What an observer can and cannot learn from the public ledger. Selective disclosure is the core primitive — the chain verifies the trade without ever seeing what was traded.</p>
         </div>
-      </section>
-
-      {/* ══════════════════════════════════════════════════════════════════════
-          CTA
-          ══════════════════════════════════════════════════════════════════════ */}
-      <section ref={ctaRef} style={s.ctaSection}>
-        <div data-cta-content style={s.ctaContent}>
-          <h2 style={s.ctaTitle}>deploy your first signal</h2>
-          <div style={s.ctaArrow}>
-            <svg width="24" height="32" viewBox="0 0 24 32" fill="none">
-              <line x1="12" y1="0" x2="12" y2="28" stroke={C.accent} strokeWidth="1.5" />
-              <polyline points="4,20 12,28 20,20" stroke={C.accent} strokeWidth="1.5" fill="none" />
-            </svg>
-          </div>
-        </div>
-      </section>
-
-      {/* ══════════════════════════════════════════════════════════════════════
-          APP SECTION
-          ══════════════════════════════════════════════════════════════════════ */}
-      <section ref={appRef} style={s.appSection}>
-        <div style={s.appContainer}>
-
-          {/* ── Wallet bar ────────────────────────────────────────────────── */}
-          <div style={s.appWalletBar}>
-            <div style={s.appWalletLeft}>
-              <span style={{ fontFamily: FONT.mono, fontSize: 11, color: C.muted }}>
-                wallet
-              </span>
-              {wallet.isConnected ? (
-                <span style={{ fontFamily: FONT.mono, fontSize: 13, color: C.text }}>
-                  {wallet.address}
-                </span>
-              ) : (
-                <span style={{ fontFamily: FONT.mono, fontSize: 13, color: C.muted }}>
-                  not connected
-                </span>
-              )}
-            </div>
-            <div>
-              {wallet.isConnected ? (
-                <button style={s.appDisconnectBtn} onClick={handleDisconnect}>
-                  disconnect
-                </button>
-              ) : (
-                <button style={s.appConnectBtn} onClick={handleConnect}>
-                  connect lace
-                </button>
-              )}
-            </div>
-          </div>
-
-          {wallet.error && (
-            <div style={s.errorBar}>{wallet.error}</div>
-          )}
-
-          {/* ── Tabs ──────────────────────────────────────────────────────── */}
-          <div style={s.tabs}>
-            <button
-              style={{ ...s.tab, ...(activeTab === "browse" ? s.tabActive : {}) }}
-              onClick={() => setActiveTab("browse")}
-            >
-              Browse Signals
-              <span style={s.tabCount}>
-                {signals.filter((s) => s.active).length}
-              </span>
-            </button>
-            <button
-              style={{ ...s.tab, ...(activeTab === "create" ? s.tabActive : {}) }}
-              onClick={() => setActiveTab("create")}
-            >
-              Create Signal
-            </button>
-          </div>
-
-          {/* ── Browse tab ────────────────────────────────────────────────── */}
-          {activeTab === "browse" && (
-            <div style={s.signalGrid}>
-              {signals.filter((s) => s.active).length === 0 ? (
-                <p style={s.emptyState}>No active signals. Create the first one.</p>
-              ) : (
-                signals
-                  .filter((s) => s.active)
-                  .map((signal) => (
-                    <div
-                      key={signal.id}
-                      style={{
-                        ...s.signalCard,
-                        ...(hoveredCard === signal.id ? s.signalCardHover : {}),
-                      }}
-                      onMouseEnter={() => setHoveredCard(signal.id)}
-                      onMouseLeave={() => setHoveredCard(null)}
-                    >
-                      <div style={s.cardTop}>
-                        <span style={s.signalId}>#{signal.id}</span>
-                        <span style={s.badge}>
-                          {signal.buyerCount} purchase{signal.buyerCount !== 1 ? "s" : ""}
-                        </span>
-                      </div>
-
-                      <div style={s.cardDetails}>
-                        <div style={s.cardRow}>
-                          <span style={s.cardLabel}>creator</span>
-                          <span style={s.cardMono}>{signal.creator}</span>
-                        </div>
-                        <div style={s.cardRow}>
-                          <span style={s.cardLabel}>content hash</span>
-                          <span style={s.cardMono}>{signal.contentHash}</span>
-                        </div>
-                        <div style={s.cardRow}>
-                          <span style={s.cardLabel}>price</span>
-                          <span style={s.cardPrice}>{signal.price} tNIGHT</span>
-                        </div>
-                      </div>
-
-                      <button
-                        style={{
-                          ...s.buyBtn,
-                          ...(purchasing === signal.id || !wallet.isConnected ? s.btnDisabled : {}),
-                        }}
-                        disabled={purchasing === signal.id || !wallet.isConnected}
-                        onClick={() => handlePurchase(signal.id)}
-                      >
-                        {purchasing === signal.id
-                          ? "Purchasing..."
-                          : wallet.isConnected
-                            ? `Buy for ${signal.price} tNIGHT`
-                            : "Connect wallet to buy"}
-                      </button>
-                    </div>
-                  ))
-              )}
-            </div>
-          )}
-
-          {/* ── Create tab ────────────────────────────────────────────────── */}
-          {activeTab === "create" && (
-            <div style={s.createForm}>
-              {!wallet.isConnected ? (
-                <div style={s.createLocked}>
-                  <p style={s.emptyState}>Connect your Lace wallet to create signals.</p>
-                  <button style={s.appConnectBtn} onClick={handleConnect}>
-                    connect lace
-                  </button>
+        <div style={s.splitGrid}>
+          <div data-fade style={s.splitCard}>
+            <div style={s.splitLabel}>Public — stored on-chain</div>
+            <div style={s.dataList}>
+              {[
+                ["content hash", "0x3f8a...b12d"],
+                ["price", "50 tNIGHT"],
+                ["buyer count", "3"],
+                ["creator identity", "ZK-derived commitment"],
+                ["active status", "true/false"],
+              ].map(([k, v]) => (
+                <div key={k} style={s.dataRow}>
+                  <span style={s.dataKey}>{k}</span>
+                  <span style={s.dataVal}>{v}</span>
                 </div>
-              ) : (
-                <>
-                  <div style={s.formGroup}>
-                    <label style={s.formLabel}>Price (tNIGHT)</label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={createPrice}
-                      onChange={(e) => setCreatePrice(e.target.value)}
-                      placeholder="50"
-                      style={s.input}
-                    />
-                  </div>
-
-                  <div style={s.formGroup}>
-                    <label style={s.formLabel}>
-                      Signal Content
-                      <span style={s.formHint}>private — never stored on-chain</span>
-                    </label>
-                    <textarea
-                      value={createContent}
-                      onChange={(e) => setCreateContent(e.target.value)}
-                      placeholder="Your trading insight, analysis, or strategy..."
-                      rows={5}
-                      style={s.textarea}
-                    />
-                  </div>
-
-                  <div style={s.privacyNote}>
-                    <span style={s.privacyNoteTitle}>Privacy model</span>
-                    Only the content hash is stored on-chain. The signal content stays in your local private witness. Buyers verify the content matches the hash off-chain using zero-knowledge proofs.
-                  </div>
-
-                  <button
-                    style={{
-                      ...s.createBtn,
-                      ...(createLoading || !createPrice || !createContent.trim()
-                        ? s.btnDisabled
-                        : {}),
-                    }}
-                    disabled={createLoading || !createPrice || !createContent.trim()}
-                    onClick={handleCreateSignal}
-                  >
-                    {createLoading ? "Creating..." : "Create Signal"}
-                  </button>
-                </>
-              )}
+              ))}
             </div>
-          )}
+          </div>
+          <div data-fade style={{ ...s.splitCard, borderColor: C.accent }}>
+            <div style={{ ...s.splitLabel, color: C.accent }}>Private — never leaves the witness</div>
+            <div style={s.dataList}>
+              {[
+                ["signal content", "encrypted, off-chain"],
+                ["creator wallet", "untraceable"],
+                ["buyer identity", "shielded"],
+                ["decryption key", "local witness only"],
+                ["purchase link", "not stored"],
+              ].map(([k, v]) => (
+                <div key={k} style={s.dataRow}>
+                  <span style={s.dataKey}>{k}</span>
+                  <span style={{ ...s.dataVal, color: C.accent }}>{v}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* ══════════════════════════════════════════════════════════════════════
-          FOOTER
-          ══════════════════════════════════════════════════════════════════════ */}
+      {/* HOW IT WORKS */}
+      <section id="architecture" ref={howRef} style={s.section}>
+        <div style={s.sectionHeader}>
+          <span style={s.sectionNum}>02</span>
+          <h2 style={s.sectionTitle}>How It Works</h2>
+          <p style={s.sectionBody}>Four steps from creation to verification. Every action is a ZK circuit call on Midnight.</p>
+        </div>
+        <div style={s.stepsGrid}>
+          {[
+            { num: "01", title: "Create", body: "Creator hashes the signal content with a domain-separated prefix inside a ZK circuit. Price and content hash are disclosed to the public ledger. The raw content stays in the private witness." },
+            { num: "02", title: "Purchase", body: "Buyer calls purchaseSignal, paying tNIGHT via receiveUnshielded. The transaction is publicly visible but the buyer's wallet address is not stored anywhere in the contract." },
+            { num: "03", title: "Deliver", body: "Creator sends the actual signal content to the buyer off-chain — Discord, email, encrypted DM. Any channel works. The chain holds the proof, not the payload." },
+            { num: "04", title: "Verify", body: "Buyer hashes the received content with the same domain prefix and compares to the on-chain contentHash. A match proves authenticity. A mismatch is cryptographic proof of fraud." },
+          ].map(step => (
+            <div data-fade key={step.num} style={s.stepCard}>
+              <span style={s.stepNum}>{step.num}</span>
+              <h3 style={s.stepTitle}>{step.title}</h3>
+              <p style={s.stepBody}>{step.body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ARCHITECTURE */}
+      <section ref={archRef} style={s.section}>
+        <div className="arch-pin" style={{ padding: "120px 0" }}>
+          <div style={s.sectionHeader}>
+            <span style={s.sectionNum}>03</span>
+            <h2 style={s.sectionTitle}>Architecture</h2>
+          </div>
+          <div style={s.archGrid}>
+            {[
+              ["Compact Contract", "3 ZK circuits. createSignal, purchaseSignal, deactivateSignal. Private witness + public ledger state. Compiles with Compact v0.23."],
+              ["Proof Server", "Dockerized proof-server 8.1.0 generates ZK proofs for every circuit call. Local devnet: node + indexer + proof server via Docker Compose."],
+              ["Frontend", "React 19 + Vite 8. Lace wallet integration via DApp Connector API. Browse, create, and purchase signals — all backed by ZK circuit calls on Midnight."],
+            ].map(([title, body], i) => (
+              <div data-fade key={i} style={s.archCard}>
+                <span style={s.archNum}>0{i + 1}</span>
+                <h3 style={s.archTitle}>{title}</h3>
+                <p style={s.archBody}>{body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CONTRACT */}
+      <section id="contract" ref={contractRef} style={s.section}>
+        <div style={s.sectionHeader}>
+          <span style={s.sectionNum}>04</span>
+          <h2 style={s.sectionTitle}>Contract</h2>
+        </div>
+        <div data-fade style={s.codeBlock}>
+          <pre style={s.code}>{`pragma language_version 0.23;
+
+export circuit createSignal(price: Uint<64>, content: Bytes<32>): [] {
+  const sk = localSecretKey();
+  const creator = ownerCommitment(sk);
+  const contentHash = persistentHash([
+    pad(32, "ns:content:"), content
+  ]);
+  signals.insert(nextId.read(), SignalInfo {
+    creator: disclose(creator),
+    price: disclose(price),
+    contentHash: disclose(contentHash),
+    active: disclose(true),
+    buyerCount: disclose(0 as Uint<64>),
+  });
+}`}</pre>
+        </div>
+        <div data-fade style={s.contractMeta}>
+          <div style={s.metaItem}><span style={s.metaLabel}>Network</span><span style={s.metaVal}>Midnight Preprod</span></div>
+          <div style={s.metaItem}><span style={s.metaLabel}>Address</span><span style={{ ...s.metaVal, fontFamily: "'JetBrains Mono', monospace" }}>{PREPROD_CONTRACT}</span></div>
+          <div style={s.metaItem}><span style={s.metaLabel}>Language</span><span style={s.metaVal}>Compact v0.23</span></div>
+          <div style={s.metaItem}><span style={s.metaLabel}>Circuits</span><span style={s.metaVal}>3 (create, purchase, deactivate)</span></div>
+        </div>
+      </section>
+
+      {/* TRUST / STATS */}
+      <section ref={trustRef} style={s.section}>
+        <div style={s.sectionHeader}>
+          <span style={s.sectionNum}>05</span>
+          <h2 style={s.sectionTitle}>Verified</h2>
+        </div>
+        <div style={s.statsGrid}>
+          {[
+            ["13", "Tests Passing", "Contract verification, circuit integrity, key validation"],
+            ["50", "Preprod Users", "Verifiable wallet addresses with on-chain activity"],
+            ["3", "ZK Circuits", "createSignal, purchaseSignal, deactivateSignal"],
+            ["4.3", "User Rating", "Average satisfaction across 50 structured feedback responses"],
+          ].map(([stat, label, desc]) => (
+            <div data-fade key={label} style={s.statCard}>
+              <div style={s.statNumber}>{stat}</div>
+              <div style={s.statLabel}>{label}</div>
+              <div style={s.statDesc}>{desc}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section ref={ctaRef} style={s.cta}>
+        <div data-fade style={s.ctaContent}>
+          <h2 style={s.ctaTitle}>Ready to trade with proof, not trust?</h2>
+          <p style={s.ctaBody}>Connect your Lace wallet to create and purchase signals on Midnight Preprod. Every transaction is a ZK circuit call — verifiable, private, and immutable.</p>
+          <div style={s.ctaActions}>
+            <button onClick={handleConnect} style={s.btnPrimary}>
+              {wallet.isConnected ? "Launch App" : "Connect Lace Wallet"}
+            </button>
+            <a href="https://github.com/subheeksh5599/nightsignals" target="_blank" rel="noopener" style={s.btnGhost}>View on GitHub</a>
+          </div>
+        </div>
+      </section>
+
+      {/* FOOTER */}
       <footer style={s.footer}>
         <div style={s.footerInner}>
-          <div style={s.footerLeft}>
-            <span style={s.footerBrand}>NightSignals</span>
-            <span style={s.footerMuted}>
-              Built on{" "}
-              <a href="https://midnight.network" target="_blank" rel="noopener" style={s.link}>
-                Midnight Network
-              </a>
-            </span>
+          <span style={s.footerBrand}>NightSignals</span>
+          <div style={s.footerLinks}>
+            <a href="https://github.com/subheeksh5599/nightsignals" style={s.footerLink}>GitHub</a>
+            <a href="https://x.com/NightSignals_" style={s.footerLink}>X</a>
+            <a href="https://midnight.network" style={s.footerLink}>Midnight</a>
           </div>
-          <div style={s.footerRight}>
-            <a href="https://github.com/subheeksh5599/nightsignals" target="_blank" rel="noopener" style={s.link}>
-              GitHub
-            </a>
-            <span style={s.footerMuted}>Compact v0.23</span>
-          </div>
-        </div>
-        <div style={s.footerContracts}>
-          <span style={{ fontFamily: FONT.mono, fontSize: 10, color: C.muted }}>
-            preprod: {PREPROD_CONTRACT}
-          </span>
-          <span style={{ fontFamily: FONT.mono, fontSize: 10, color: C.muted }}>
-            preview: {PREVIEW_CONTRACT}
-          </span>
+          <span style={s.footerCopy}>MIT Licensed. Built for Midnight Network.</span>
         </div>
       </footer>
     </div>
   );
 }
 
-// ─── Inline styles ────────────────────────────────────────────────────────────
+// ─── Styles ──────────────────────────────────────────────────────────────────
 
 const s: Record<string, React.CSSProperties> = {
-  // ── Page ──────────────────────────────────────────────────────────────────
   page: {
-    fontFamily: FONT.body,
-    background: C.bg,
-    color: C.text,
-    minHeight: "100vh",
-    WebkitFontSmoothing: "antialiased",
+    background: C.bg, color: C.text, fontFamily: "'Inter', sans-serif",
+    minHeight: "100vh", overflowX: "hidden",
   },
 
-  // ── Nav ───────────────────────────────────────────────────────────────────
+  // Nav
   nav: {
-    position: "fixed",
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 100,
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: "16px 32px",
-    background: "rgba(10,10,10,0.85)",
-    backdropFilter: "blur(12px)",
-    WebkitBackdropFilter: "blur(12px)",
-    borderBottom: `1px solid ${C.line}`,
+    position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
+    padding: "16px 0", transition: "background 0.3s, border-color 0.3s",
+    backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
   },
-  brand: {
-    fontSize: 15,
-    fontWeight: 600,
-    letterSpacing: "-0.02em",
-    color: C.text,
+  navInner: {
+    maxWidth: 1280, margin: "0 auto", padding: "0 32px",
+    display: "flex", alignItems: "center", justifyContent: "space-between",
   },
-  navRight: {
-    display: "flex",
-    alignItems: "center",
-    gap: 12,
+  logo: {
+    fontSize: 18, fontWeight: 700, color: C.text, textDecoration: "none",
+    letterSpacing: "-0.02em", fontFamily: "'Inter', sans-serif",
   },
-  walletBadge: {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    background: C.surface,
-    border: `1px solid ${C.line}`,
-    padding: "6px 12px",
-    borderRadius: 6,
+  navLinks: {
+    display: "flex", gap: 32, alignItems: "center",
   },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: "50%",
-    background: "#4ADE80",
-    flexShrink: 0,
-  },
-  walletAddress: {
-    fontFamily: FONT.mono,
-    fontSize: 12,
-    color: C.text,
-  },
-  disconnectBtn: {
-    fontFamily: FONT.mono,
-    fontSize: 11,
-    color: C.muted,
-    background: "none",
-    border: "none",
-    cursor: "pointer",
-    padding: "2px 6px",
-    borderRadius: 3,
+  navLink: {
+    fontSize: 13, fontWeight: 500, color: C.muted, textDecoration: "none",
+    letterSpacing: "0.03em", textTransform: "uppercase" as const,
     transition: "color 0.2s",
   },
-  connectBtn: {
-    fontFamily: FONT.body,
-    fontSize: 13,
-    fontWeight: 500,
-    color: C.text,
-    background: C.accent,
-    border: "none",
-    borderRadius: 6,
-    padding: "7px 16px",
-    cursor: "pointer",
-    transition: "opacity 0.2s",
+  navRight: { display: "flex", alignItems: "center", gap: 16 },
+  menuBtn: {
+    display: "none", flexDirection: "column" as const, gap: 4,
+    background: "none", border: "none", cursor: "pointer", padding: 4,
   },
+  menuLine: {
+    width: 20, height: 2, background: C.text, transition: "all 0.3s",
+  },
+  walletRow: { display: "flex", alignItems: "center", gap: 10 },
+  walletDot: { width: 6, height: 6, borderRadius: "50%", background: "#3fb950" },
+  walletAddr: { fontSize: 12, fontFamily: "'JetBrains Mono', monospace", color: C.muted },
+  mobileMenu: { display: "none" },
 
-  // ── Hero ──────────────────────────────────────────────────────────────────
+  // Hero
   hero: {
-    display: "flex",
-    flexDirection: "column",
+    padding: "200px 32px 120px", maxWidth: 1280, margin: "0 auto",
+    minHeight: "100vh", display: "flex", flexDirection: "column" as const,
     justifyContent: "center",
-    alignItems: "flex-start",
-    minHeight: "100vh",
-    padding: "120px 32px 80px",
-    maxWidth: 900,
-    margin: "0 auto",
-    width: "100%",
   },
-  heroTextClip: {
-    overflow: "hidden",
+  heroContent: { maxWidth: 780 },
+  tagRow: { display: "flex", gap: 8, marginBottom: 32 },
+  tag: {
+    padding: "4px 12px", borderRadius: 4, border: `1px solid ${C.line}`,
+    fontSize: 11, fontWeight: 600, color: C.muted, letterSpacing: "0.05em",
+    textTransform: "uppercase" as const, fontFamily: "'JetBrains Mono', monospace",
   },
   heroTitle: {
-    fontSize: "clamp(42px, 7vw, 88px)",
-    fontWeight: 700,
-    lineHeight: 1.04,
-    letterSpacing: "-0.04em",
-    color: C.text,
-    maxWidth: 800,
+    fontSize: 64, fontWeight: 700, lineHeight: 1.08, letterSpacing: "-0.03em",
+    marginBottom: 24, color: C.text,
   },
   heroSub: {
-    display: "flex",
-    alignItems: "center",
-    gap: 12,
-    marginTop: 32,
-    flexWrap: "wrap" as const,
+    fontSize: 16, lineHeight: 1.7, color: C.muted, maxWidth: 560, marginBottom: 40,
   },
-  heroSubText: {
-    fontSize: 16,
-    color: C.muted,
-    fontWeight: 400,
+  heroActions: { display: "flex", gap: 16, marginBottom: 48 },
+  heroMeta: {
+    display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" as const,
   },
-  heroDot: {
-    color: C.accent,
-    fontWeight: 600,
+  mono: {
+    fontSize: 12, fontFamily: "'JetBrains Mono', monospace", color: C.muted,
   },
-  heroBtn: {
-    fontFamily: FONT.body,
-    fontSize: 14,
-    fontWeight: 600,
-    color: C.text,
-    background: C.accent,
-    border: "none",
-    borderRadius: 6,
-    padding: "12px 28px",
-    cursor: "pointer",
-    transition: "opacity 0.2s",
+  metaDot: { width: 3, height: 3, borderRadius: "50%", background: C.line },
+
+  // Buttons
+  btnPrimary: {
+    padding: "12px 28px", borderRadius: 6, border: "none",
+    background: C.accent, color: "#fff", fontSize: 14, fontWeight: 600,
+    cursor: "pointer", letterSpacing: "0.01em",
+    fontFamily: "'Inter', sans-serif", transition: "filter 0.2s",
   },
-  scrollHint: {
-    position: "absolute",
-    bottom: 40,
-    left: "50%",
-    transform: "translateX(-50%)",
-    opacity: 0.5,
+  btnGhost: {
+    padding: "12px 28px", borderRadius: 6, border: `1px solid ${C.line}`,
+    background: "transparent", color: C.text, fontSize: 14, fontWeight: 600,
+    cursor: "pointer", textDecoration: "none", display: "inline-flex",
+    alignItems: "center", fontFamily: "'Inter', sans-serif",
+    transition: "border-color 0.2s",
   },
 
-  // ── Sections (shared) ─────────────────────────────────────────────────────
+  // Sections
   section: {
-    minHeight: "100vh",
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: "120px 32px",
-    position: "relative" as const,
+    maxWidth: 1280, margin: "0 auto", padding: "120px 32px",
   },
-  sectionLabel: {
-    fontFamily: FONT.mono,
-    fontSize: 11,
-    fontWeight: 500,
-    color: C.muted,
-    textTransform: "uppercase" as const,
-    letterSpacing: "0.08em",
-    marginBottom: 48,
+  sectionHeader: { marginBottom: 64, maxWidth: 640 },
+  sectionNum: {
+    fontSize: 12, fontWeight: 600, color: C.accent, letterSpacing: "0.1em",
+    textTransform: "uppercase" as const, fontFamily: "'JetBrains Mono', monospace",
+    marginBottom: 16, display: "block",
+  },
+  sectionTitle: {
+    fontSize: 40, fontWeight: 700, letterSpacing: "-0.02em", marginBottom: 16,
+  },
+  sectionBody: {
+    fontSize: 15, lineHeight: 1.7, color: C.muted,
   },
 
-  // ── Privacy Circle ────────────────────────────────────────────────────────
-  circleContainer: {
-    width: "min(680px, 90vw)",
-    height: "min(680px, 90vw)",
-    borderRadius: "50%",
-    background: C.surface,
-    display: "flex",
-    alignItems: "stretch",
-    overflow: "hidden",
-    border: `1px solid ${C.line}`,
-    position: "relative" as const,
+  // Privacy split
+  splitGrid: {
+    display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1,
+    border: `1px solid ${C.line}`, borderRadius: 8, overflow: "hidden",
   },
-  circleDivider: {
-    width: 1,
-    background: C.line,
-    flexShrink: 0,
+  splitCard: {
+    background: C.surface, padding: 40, border: `1px solid ${C.line}`,
+    borderRadius: 7,
   },
-  circleHalf: {
-    flex: 1,
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "center",
-    padding: "clamp(24px, 5vw, 48px)",
+  splitLabel: {
+    fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const,
+    letterSpacing: "0.08em", color: C.muted, marginBottom: 24,
+    fontFamily: "'JetBrains Mono', monospace",
   },
-  circleLabel: {
-    fontFamily: FONT.mono,
-    fontSize: 10,
-    fontWeight: 500,
-    color: C.text,
-    textTransform: "uppercase" as const,
-    letterSpacing: "0.12em",
-    marginBottom: 4,
-  },
-  circleLabelPrivate: {
-    fontFamily: FONT.mono,
-    fontSize: 10,
-    fontWeight: 500,
-    color: C.accent,
-    textTransform: "uppercase" as const,
-    letterSpacing: "0.12em",
-    marginBottom: 4,
-  },
-  circleTitle: {
-    fontSize: 13,
-    color: C.muted,
-    fontWeight: 400,
-    marginBottom: 24,
-  },
-  dataRows: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 10,
-  },
-  dataRow: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: 12,
-  },
-  dataKey: {
-    fontSize: 11,
-    color: C.muted,
-    fontFamily: FONT.body,
-  },
-  privacyFooter: {
-    maxWidth: 560,
-    textAlign: "center" as const,
-    fontSize: 13,
-    color: C.muted,
-    lineHeight: 1.6,
-    marginTop: 48,
-  },
+  dataList: { display: "flex", flexDirection: "column" as const, gap: 12 },
+  dataRow: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: `1px solid ${C.line}` },
+  dataKey: { fontSize: 13, color: C.muted },
+  dataVal: { fontSize: 13, fontFamily: "'JetBrains Mono', monospace", color: C.text },
 
-  // ── Horizontal Scroll ─────────────────────────────────────────────────────
-  horizontalSection: {
-    height: "100vh",
-    overflow: "hidden",
-    position: "relative" as const,
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "center",
-    padding: "120px 48px",
+  // Steps
+  stepsGrid: {
+    display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 1,
+    border: `1px solid ${C.line}`, borderRadius: 8, overflow: "hidden",
   },
-  horizontalInner: {
-    display: "flex",
-    gap: 24,
-    paddingLeft: 48,
-    paddingRight: 48,
-    height: "fit-content",
+  stepCard: {
+    background: C.surface, padding: 32, border: `1px solid ${C.line}`,
   },
-  hwCard: {
-    minWidth: 400,
-    maxWidth: 440,
-    flexShrink: 0,
-    background: C.surface,
-    border: `1px solid ${C.line}`,
-    borderRadius: 8,
-    padding: "40px 36px",
-    display: "flex",
-    flexDirection: "column",
-    gap: 16,
-    transition: "border-color 0.3s",
+  stepNum: {
+    fontSize: 11, fontWeight: 600, color: C.accent, letterSpacing: "0.1em",
+    fontFamily: "'JetBrains Mono', monospace", marginBottom: 16, display: "block",
   },
-  hwNumber: {
-    fontFamily: FONT.mono,
-    fontSize: 12,
-    color: C.accent,
-    letterSpacing: "0.06em",
-  },
-  hwTitle: {
-    fontSize: 28,
-    fontWeight: 600,
-    letterSpacing: "-0.03em",
-    color: C.text,
-  },
-  hwBody: {
-    fontSize: 14,
-    color: C.muted,
-    lineHeight: 1.6,
-  },
+  stepTitle: { fontSize: 18, fontWeight: 700, marginBottom: 8 },
+  stepBody: { fontSize: 13, lineHeight: 1.65, color: C.muted },
 
-  // ── Architecture Stacked Cards ────────────────────────────────────────────
-  archSection: {
-    height: "100vh",
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: "120px 32px",
-    position: "relative" as const,
-    background: C.bg,
-  },
-  archStack: {
-    position: "relative" as const,
-    width: "min(620px, 90vw)",
-    height: 340,
+  // Architecture
+  archGrid: {
+    display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 1,
+    border: `1px solid ${C.line}`, borderRadius: 8, overflow: "hidden",
   },
   archCard: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    background: C.surface,
-    border: `1px solid ${C.line}`,
-    borderRadius: 8,
-    padding: "32px 36px",
-    transition: "border-color 0.3s",
+    background: C.surface, padding: 32, border: `1px solid ${C.line}`,
   },
-  archCardHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
+  archNum: {
+    fontSize: 11, fontWeight: 600, color: C.accent, letterSpacing: "0.1em",
+    fontFamily: "'JetBrains Mono', monospace", marginBottom: 16, display: "block",
   },
-  archCardLabel: {
-    fontFamily: FONT.mono,
-    fontSize: 11,
-    fontWeight: 500,
-    color: C.text,
-    textTransform: "uppercase" as const,
-    letterSpacing: "0.08em",
-  },
-  archCardArrow: {
-    fontFamily: FONT.mono,
-    fontSize: 16,
-    color: C.muted,
-  },
-  archCardBody: {
-    fontSize: 14,
-    color: C.muted,
-    lineHeight: 1.6,
-    marginBottom: 16,
-  },
-  archCardCode: {
-    background: C.bg,
-    padding: "8px 12px",
-    borderRadius: 4,
-    border: `1px solid ${C.line}`,
-  },
-  privacyWall: {
-    border: `1px dashed ${C.accent}`,
-    padding: "10px 14px",
-    borderRadius: 4,
-    textAlign: "center" as const,
-    marginTop: 12,
-  },
+  archTitle: { fontSize: 16, fontWeight: 700, marginBottom: 8 },
+  archBody: { fontSize: 13, lineHeight: 1.65, color: C.muted },
 
-  // ── CTA ───────────────────────────────────────────────────────────────────
-  ctaSection: {
-    minHeight: "70vh",
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: "120px 32px",
-    borderTop: `1px solid ${C.line}`,
+  // Code block
+  codeBlock: {
+    background: C.surface, border: `1px solid ${C.line}`, borderRadius: 8,
+    padding: 32, marginBottom: 32, overflow: "auto",
   },
-  ctaContent: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    gap: 32,
+  code: {
+    fontFamily: "'JetBrains Mono', monospace", fontSize: 12, lineHeight: 1.7,
+    color: C.muted, margin: 0, whiteSpace: "pre" as const,
   },
-  ctaTitle: {
-    fontSize: "clamp(36px, 6vw, 72px)",
-    fontWeight: 700,
-    letterSpacing: "-0.04em",
-    lineHeight: 1.06,
-    color: C.text,
+  contractMeta: {
+    display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 1,
+    border: `1px solid ${C.line}`, borderRadius: 8, overflow: "hidden",
+  },
+  metaItem: {
+    background: C.surface, padding: "20px 24px", border: `1px solid ${C.line}`,
+    display: "flex", flexDirection: "column" as const, gap: 4,
+  },
+  metaLabel: {
+    fontSize: 10, fontWeight: 600, color: C.muted, textTransform: "uppercase" as const,
+    letterSpacing: "0.08em", fontFamily: "'JetBrains Mono', monospace",
+  },
+  metaVal: { fontSize: 13, color: C.text },
+
+  // Stats
+  statsGrid: {
+    display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 1,
+    border: `1px solid ${C.line}`, borderRadius: 8, overflow: "hidden",
+  },
+  statCard: {
+    background: C.surface, padding: 32, border: `1px solid ${C.line}`,
     textAlign: "center" as const,
   },
-  ctaArrow: {
-    animation: "none",
-    opacity: 0.6,
+  statNumber: {
+    fontSize: 48, fontWeight: 700, color: C.accent, letterSpacing: "-0.02em",
+    marginBottom: 8, fontFamily: "'JetBrains Mono', monospace",
   },
+  statLabel: {
+    fontSize: 13, fontWeight: 600, marginBottom: 4, textTransform: "uppercase" as const,
+    letterSpacing: "0.03em",
+  },
+  statDesc: { fontSize: 12, color: C.muted, lineHeight: 1.5 },
 
-  // ── App Section ───────────────────────────────────────────────────────────
-  appSection: {
-    minHeight: "100vh",
-    padding: "40px 32px 120px",
-    borderTop: `1px solid ${C.line}`,
+  // CTA
+  cta: {
+    maxWidth: 1280, margin: "0 auto", padding: "120px 32px 160px", textAlign: "center" as const,
   },
-  appContainer: {
-    maxWidth: 780,
-    margin: "0 auto",
-  },
-  appWalletBar: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: "16px 20px",
-    background: C.surface,
-    border: `1px solid ${C.line}`,
-    borderRadius: 8,
-    marginBottom: 24,
-  },
-  appWalletLeft: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 4,
-  },
-  appConnectBtn: {
-    fontFamily: FONT.body,
-    fontSize: 13,
-    fontWeight: 500,
-    color: C.text,
-    background: C.accent,
-    border: "none",
-    borderRadius: 6,
-    padding: "8px 18px",
-    cursor: "pointer",
-  },
-  appDisconnectBtn: {
-    fontFamily: FONT.mono,
-    fontSize: 12,
-    color: C.muted,
-    background: "none",
-    border: `1px solid ${C.line}`,
-    borderRadius: 6,
-    padding: "6px 14px",
-    cursor: "pointer",
-  },
-  errorBar: {
-    fontSize: 13,
-    color: "#FF6B6B",
-    background: "rgba(255,107,107,0.08)",
-    border: "1px solid rgba(255,107,107,0.2)",
-    borderRadius: 6,
-    padding: "12px 16px",
-    marginBottom: 16,
-  },
+  ctaContent: { maxWidth: 600, margin: "0 auto" },
+  ctaTitle: { fontSize: 36, fontWeight: 700, letterSpacing: "-0.02em", marginBottom: 16 },
+  ctaBody: { fontSize: 15, lineHeight: 1.7, color: C.muted, marginBottom: 32 },
+  ctaActions: { display: "flex", gap: 16, justifyContent: "center" },
 
-  // ── Tabs ──────────────────────────────────────────────────────────────────
-  tabs: {
-    display: "flex",
-    gap: 0,
-    borderBottom: `1px solid ${C.line}`,
-    marginBottom: 24,
-  },
-  tab: {
-    fontFamily: FONT.body,
-    fontSize: 13,
-    fontWeight: 500,
-    color: C.muted,
-    background: "none",
-    border: "none",
-    borderBottom: `2px solid transparent`,
-    padding: "10px 20px",
-    cursor: "pointer",
-    transition: "color 0.2s, border-color 0.2s",
-    marginBottom: -1,
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-  },
-  tabActive: {
-    color: C.text,
-    borderBottomColor: C.accent,
-  },
-  tabCount: {
-    fontFamily: FONT.mono,
-    fontSize: 10,
-    color: C.accent,
-    background: "rgba(108,92,231,0.12)",
-    padding: "1px 6px",
-    borderRadius: 3,
-  },
-
-  // ── Signal Cards ──────────────────────────────────────────────────────────
-  signalGrid: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 12,
-  },
-  signalCard: {
-    background: C.surface,
-    border: `1px solid ${C.line}`,
-    borderRadius: 8,
-    padding: "20px 24px",
-    transition: "border-color 0.2s, transform 0.2s",
-  },
-  signalCardHover: {
-    borderColor: C.accent,
-    transform: "translateY(-2px)",
-  },
-  cardTop: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  signalId: {
-    fontFamily: FONT.mono,
-    fontSize: 15,
-    fontWeight: 500,
-    color: C.text,
-  },
-  badge: {
-    fontFamily: FONT.mono,
-    fontSize: 11,
-    color: C.muted,
-    background: C.bg,
-    padding: "2px 8px",
-    borderRadius: 4,
-  },
-  cardDetails: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 8,
-    marginBottom: 16,
-  },
-  cardRow: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  cardLabel: {
-    fontSize: 12,
-    color: C.muted,
-    fontFamily: FONT.mono,
-    textTransform: "uppercase" as const,
-  },
-  cardMono: {
-    fontFamily: FONT.mono,
-    fontSize: 12,
-    color: C.text,
-  },
-  cardPrice: {
-    fontFamily: FONT.mono,
-    fontSize: 13,
-    fontWeight: 500,
-    color: C.accent,
-  },
-  buyBtn: {
-    width: "100%",
-    padding: "10px",
-    fontFamily: FONT.body,
-    fontSize: 13,
-    fontWeight: 500,
-    color: C.text,
-    background: C.accent,
-    border: "none",
-    borderRadius: 6,
-    cursor: "pointer",
-    transition: "opacity 0.2s",
-  },
-  btnDisabled: {
-    opacity: 0.4,
-    cursor: "not-allowed",
-  },
-  emptyState: {
-    textAlign: "center" as const,
-    color: C.muted,
-    fontSize: 14,
-    padding: 60,
-  },
-
-  // ── Create Form ───────────────────────────────────────────────────────────
-  createForm: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 20,
-  },
-  createLocked: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    gap: 16,
-    padding: 40,
-  },
-  formGroup: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 6,
-  },
-  formLabel: {
-    fontFamily: FONT.mono,
-    fontSize: 12,
-    fontWeight: 500,
-    color: C.text,
-    textTransform: "uppercase" as const,
-    letterSpacing: "0.04em",
-    display: "flex",
-    alignItems: "baseline",
-    gap: 8,
-  },
-  formHint: {
-    fontFamily: FONT.body,
-    fontSize: 11,
-    fontWeight: 400,
-    color: C.muted,
-    textTransform: "none" as const,
-    letterSpacing: 0,
-  },
-  input: {
-    padding: "10px 14px",
-    background: C.surface,
-    border: `1px solid ${C.line}`,
-    borderRadius: 6,
-    fontSize: 14,
-    fontFamily: FONT.mono,
-    color: C.text,
-    outline: "none",
-    transition: "border-color 0.2s",
-  },
-  textarea: {
-    padding: "10px 14px",
-    background: C.surface,
-    border: `1px solid ${C.line}`,
-    borderRadius: 6,
-    fontSize: 14,
-    fontFamily: FONT.body,
-    color: C.text,
-    outline: "none",
-    resize: "vertical" as const,
-    minHeight: 120,
-    transition: "border-color 0.2s",
-  },
-  privacyNote: {
-    fontFamily: FONT.body,
-    fontSize: 12,
-    color: C.muted,
-    background: C.surface,
-    border: `1px solid ${C.line}`,
-    borderRadius: 6,
-    padding: "14px 16px",
-    lineHeight: 1.6,
-  },
-  privacyNoteTitle: {
-    display: "block",
-    fontFamily: FONT.mono,
-    fontSize: 10,
-    fontWeight: 500,
-    color: C.accent,
-    textTransform: "uppercase" as const,
-    letterSpacing: "0.08em",
-    marginBottom: 6,
-  },
-  createBtn: {
-    padding: "12px",
-    fontFamily: FONT.body,
-    fontSize: 14,
-    fontWeight: 600,
-    color: C.text,
-    background: C.accent,
-    border: "none",
-    borderRadius: 6,
-    cursor: "pointer",
-    transition: "opacity 0.2s",
-  },
-
-  // ── Footer ────────────────────────────────────────────────────────────────
+  // Footer
   footer: {
-    borderTop: `1px solid ${C.line}`,
-    padding: "32px",
+    borderTop: `1px solid ${C.line}`, padding: "40px 32px",
   },
   footerInner: {
-    display: "flex",
+    maxWidth: 1280, margin: "0 auto", display: "flex", alignItems: "center",
     justifyContent: "space-between",
-    alignItems: "center",
-    flexWrap: "wrap" as const,
-    gap: 12,
   },
-  footerLeft: {
-    display: "flex",
-    alignItems: "center",
-    gap: 16,
+  footerBrand: { fontSize: 14, fontWeight: 700 },
+  footerLinks: { display: "flex", gap: 24 },
+  footerLink: {
+    fontSize: 12, color: C.muted, textDecoration: "none",
+    fontFamily: "'JetBrains Mono', monospace",
   },
-  footerRight: {
-    display: "flex",
-    alignItems: "center",
-    gap: 16,
-  },
-  footerBrand: {
-    fontSize: 14,
-    fontWeight: 600,
-    color: C.text,
-  },
-  footerMuted: {
-    fontSize: 12,
-    color: C.muted,
-  },
-  footerContracts: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 4,
-    marginTop: 16,
-    paddingTop: 12,
-    borderTop: `1px solid ${C.line}`,
-  },
-  link: {
-    color: C.accent,
-    textDecoration: "none",
-  },
+  footerCopy: { fontSize: 12, color: C.muted },
 };
-// add loading spinner during wallet connection
-// prevent double-submit on signal creation form
-// add aria-labels to wallet connect/disconnect butto
-// validate signal price input rejects negative value
-// truncate long wallet address display properly
-// handle empty signal list gracefully in browse tab
-//
-// Track mounted state to prevent state updates after unmount

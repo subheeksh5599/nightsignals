@@ -10,7 +10,7 @@
 ![Tests](https://img.shields.io/badge/tests-13%2F13%20passed-3fb950)
 ![Stack](https://img.shields.io/badge/Compact·Midnight.js%204.1·React%2019·TypeScript-14151a)
 ![Midnight](https://img.shields.io/badge/Midnight-preprod-6C5CE7)
-[![X (Twitter)](https://img.shields.io/badge/X-@NightSignals__mid-1DA1F2)](https://x.com/NightSignals_mid)
+[![X (Twitter)](https://img.shields.io/badge/X-@NightSignals__-1DA1F2)](https://x.com/NightSignals_)
 
 ### the insight is proven, not shown.
 
