@@ -11,20 +11,30 @@ const CONTRACT = '5c35a52355dec9b34aa0e766c36f3588781a331fe7ebb801cf474ecdad80db
 export default function HomePage() {
   const [wallet, setWallet] = useState<WalletState>({ isConnected: false, address: null, coinPublicKey: null, error: null });
   const [scrolled, setScrolled] = useState(false);
+  const [connecting, setConnecting] = useState(false);
   const sectionRefs = useRef<(HTMLElement | null)[]>([]);
 
   const connect = useCallback(async () => {
+    if (connecting) return;
+    setConnecting(true);
+    setWallet(w => ({ ...w, error: null }));
     try {
-      setWallet(w => ({ ...w, error: null }));
       const wallets = listWallets();
-      if (!wallets.length) { setWallet(w => ({ ...w, error: 'No Midnight wallet found. Install Lace.' })); return; }
+      if (!wallets.length) {
+        setWallet(w => ({ ...w, error: 'Lace wallet not detected. Please install the Lace browser extension for Midnight Network.' }));
+        setConnecting(false);
+        return;
+      }
       const api = await connectWallet(selectFirstWallet());
       const pk = await api.getCoinPublicKey();
       setWallet({ isConnected: true, address: pk.slice(0, 12) + '...' + pk.slice(-6), coinPublicKey: pk, error: null });
     } catch (err: unknown) {
-      setWallet(w => ({ ...w, error: (err as Error)?.message || 'Connection failed' }));
+      const msg = (err as Error)?.message || 'Connection failed';
+      setWallet(w => ({ ...w, error: msg.includes('rejected') ? 'Connection rejected. Please approve the Lace wallet prompt.' : msg }));
+    } finally {
+      setConnecting(false);
     }
-  }, []);
+  }, [connecting]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -72,7 +82,12 @@ export default function HomePage() {
                   <button onClick={() => setWallet({ isConnected: false, address: null, coinPublicKey: null, error: null })} className="btn-ghost-sm">Disconnect</button>
                 </div>
               ) : (
-                <button onClick={connect} className="btn-primary">Connect Lace</button>
+                <>
+                <button onClick={connect} disabled={connecting} className="btn-primary">
+                  {connecting ? 'Connecting...' : 'Connect Lace'}
+                </button>
+                {wallet.error && <span className="nav-error">{wallet.error}</span>}
+                </>
               )}
             </div>
           </div>
@@ -96,11 +111,12 @@ export default function HomePage() {
               disclosure — the chain confirms the trade without ever seeing what was traded.
             </p>
             <div className="hero-actions">
-              <button onClick={connect} className="btn-primary-lg">
-                {wallet.isConnected ? 'Wallet Connected' : 'Connect Lace Wallet'}
+              <button onClick={connect} disabled={connecting} className="btn-primary-lg">
+                {connecting ? 'Connecting...' : wallet.isConnected ? 'Wallet Connected' : 'Connect Lace Wallet'}
               </button>
               <a href="#privacy" className="btn-outline-lg">Explore</a>
             </div>
+            {wallet.error && <p className="hero-error">{wallet.error}</p>}
             <div className="hero-stats">
               <div className="hero-stat">
                 <span className="hero-stat-num">3</span>
@@ -293,7 +309,10 @@ export default function HomePage() {
           <h2>Trade with proof,<br />not trust.</h2>
           <p>Connect your Lace wallet to create and purchase signals on Midnight Preprod. Every transaction is a ZK circuit call — verifiable, private, and immutable.</p>
           <div className="cta-actions">
-            <button onClick={connect} className="btn-primary-lg">{wallet.isConnected ? 'Launch App' : 'Connect Lace Wallet'}</button>
+            <button onClick={connect} disabled={connecting} className="btn-primary-lg">
+              {connecting ? 'Connecting...' : wallet.isConnected ? 'Launch App' : 'Connect Lace Wallet'}
+            </button>
+            {wallet.error && <p className="cta-error">{wallet.error}</p>}
             <a href="https://github.com/subheeksh5599/nightsignals" target="_blank" rel="noopener" className="btn-outline-lg">GitHub</a>
           </div>
         </section>
@@ -452,7 +471,11 @@ const css = `
   .btn-primary-lg { padding: 16px 36px; font-size: 15px; border-radius: var(--radius); }
   .btn-outline-lg { padding: 16px 36px; border-radius: var(--radius); border: 1px solid var(--border2); background: transparent; color: var(--text); font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit; text-decoration: none; display: inline-flex; align-items: center; transition: border-color 0.2s; }
   .btn-outline-lg:hover { border-color: var(--text3); }
+  .btn-primary:disabled, .btn-primary-lg:disabled { opacity: 0.6; cursor: not-allowed; }
   .btn-ghost-sm { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: transparent; color: var(--text2); font-size: 12px; font-weight: 500; cursor: pointer; font-family: inherit; }
+  .nav-error { font-size: 11px; color: #ff5f56; max-width: 200px; line-height: 1.4; }
+  .hero-error { font-size: 14px; color: #ff5f56; margin-top: 12px; }
+  .cta-error { font-size: 14px; color: #ff5f56; margin-top: 12px; }
 
   /* Wallet */
   .wallet-badge { display: flex; align-items: center; gap: 10px; }
