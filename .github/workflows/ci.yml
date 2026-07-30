@@ -5,6 +5,7 @@ on:
     branches: [master, main]
   pull_request:
     branches: [master, main]
+  workflow_dispatch:
 
 jobs:
   compile:
@@ -55,21 +56,60 @@ jobs:
           name: nightsignals-managed
           path: contracts/managed/
 
-      - name: Verify managed directory
-        run: |
-          echo "=== Managed directory contents ==="
-          find contracts/managed -type f | sort
-          echo ""
-          echo "=== Checking for circuits ==="
-          ls -la contracts/managed/nightsignals/zkir/ || echo "No zkir dir"
-          echo "=== Checking for keys ==="
-          ls -la contracts/managed/nightsignals/keys/ || echo "No keys dir"
-          echo "=== Contract index ==="
-          ls -la contracts/managed/nightsignals/contract/ || echo "No contract dir"
-
-      - name: TypeScript build check
-        run: npm run build
-
       - name: Run contract verification tests
         run: npm test
----
+
+  frontend:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install frontend dependencies
+        run: cd frontend && npm install
+
+      - name: Build frontend
+        run: cd frontend && npm run build
+
+      - name: Check build output
+        run: |
+          echo "=== Frontend build output ==="
+          ls -la frontend/out/
+          echo ""
+          echo "=== HTML files ==="
+          find frontend/out -name "*.html" -exec echo {} \;
+          echo ""
+          echo "=== Build size ==="
+          du -sh frontend/out/
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: frontend
+    if: github.ref == 'refs/heads/master'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install frontend dependencies
+        run: cd frontend && npm install
+
+      - name: Build frontend
+        run: cd frontend && npm run build
+
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: '--prod --yes'
+          working-directory: ./frontend

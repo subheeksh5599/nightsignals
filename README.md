@@ -665,16 +665,6 @@ the insight is proven, not shown. that's the credential.
 | demo video of MVP | ✅ |
 | 15+ meaningful commits | ✅ 96 commits |
 
-### 🌕 level 5 — full moon (est $120)
-
-| requirement | status |
-|---|---|
-| 50 preprod users (verifiable addresses) | ⚠️ 50 wallets listed, 46 txns pending (faucet needed) |
-| feedback loop documented | ✅ [FEEDBACK.md](./FEEDBACK.md) — 50 responses |
-| updated documentation | ✅ |
-| demo video | ✅ |
-| 20+ meaningful commits | ✅ 96 commits |
-
 ---
 
 ## roadmap
