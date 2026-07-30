@@ -1,59 +1,19 @@
 'use client';
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { listWallets, selectFirstWallet, connectWallet } from '@/lib/wallet';
 import type { WalletState } from '@/lib/types';
 
 declare global { interface Window { gsap?: any; ScrollTrigger?: any; } }
 
 const CONTRACT = '5c35a52355dec9b34aa0e766c36f3588781a331fe7ebb801cf474ecdad80db3e';
-const FF = { mono: "'JetBrains Mono', monospace", sans: "'Inter', sans-serif" };
-
-const publicData = [
-  ['content hash', '0x3f8a...b12d'],
-  ['price', '50 tNIGHT'],
-  ['buyer count', '3'],
-  ['creator identity', 'ZK-derived commitment'],
-  ['active status', 'true/false'],
-];
-const privateData = [
-  ['signal content', 'encrypted, off-chain'],
-  ['creator wallet', 'untraceable'],
-  ['buyer identity', 'shielded'],
-  ['decryption key', 'local witness only'],
-  ['purchase link', 'not stored'],
-];
-const steps = [
-  ['01', 'Create', 'Creator hashes the signal content with a domain-separated prefix inside a ZK circuit. Price and content hash are disclosed to the public ledger. The raw content stays in the private witness.'],
-  ['02', 'Purchase', "Buyer calls purchaseSignal, paying tNIGHT via receiveUnshielded. The transaction is publicly visible but the buyer's wallet address is not stored anywhere in the contract."],
-  ['03', 'Deliver', 'Creator sends the actual signal content to the buyer off-chain. Discord, email, encrypted DM. Any channel works. The chain holds the proof, not the payload.'],
-  ['04', 'Verify', 'Buyer hashes the received content with the same domain prefix and compares to the on-chain contentHash. A match proves authenticity. A mismatch is cryptographic proof of fraud.'],
-];
-const metaFields = [
-  ['Network', 'Midnight Preprod'],
-  ['Address', CONTRACT],
-  ['Language', 'Compact v0.23'],
-  ['Circuits', '3 (create, purchase, deactivate)'],
-];
-const statsData = [
-  ['13', 'Tests Passing', 'Contract verification, circuit integrity, key validation'],
-  ['50', 'Preprod Users', 'Verifiable wallet addresses with on-chain activity'],
-  ['3', 'ZK Circuits', 'createSignal, purchaseSignal, deactivateSignal'],
-  ['4.3', 'User Rating', 'Average satisfaction across 50 structured feedback responses'],
-];
 
 export default function HomePage() {
   const [wallet, setWallet] = useState<WalletState>({ isConnected: false, address: null, coinPublicKey: null, error: null });
-  const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const sectionRefs = useRef<(HTMLElement | null)[]>([]);
 
-  const heroRef = useRef<HTMLElement>(null);
-  const privacyRef = useRef<HTMLElement>(null);
-  const howRef = useRef<HTMLElement>(null);
-  const contractRef = useRef<HTMLElement>(null);
-  const trustRef = useRef<HTMLElement>(null);
-
-  const handleConnect = useCallback(async () => {
+  const connect = useCallback(async () => {
     try {
       setWallet(w => ({ ...w, error: null }));
       const wallets = listWallets();
@@ -78,127 +38,200 @@ export default function HomePage() {
     if (!gsap || !ST) return;
     gsap.registerPlugin(ST);
     const ctx = gsap.context(() => {
-      gsap.fromTo('[data-hero]', { y: 60, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 1.2, ease: 'power3.out', delay: 0.2 });
-      [privacyRef, howRef, contractRef, trustRef].forEach(ref => {
-        if (!ref.current) return;
-        const els = ref.current.querySelectorAll('[data-fade]');
-        if (els.length) gsap.fromTo(els, { y: 40, autoAlpha: 0 }, { y: 0, autoAlpha: 1, stagger: 0.08, duration: 0.8, ease: 'power3.out', scrollTrigger: { trigger: ref.current, start: 'top 80%' } });
+      gsap.fromTo('.hero-content', { y: 80, opacity: 0 }, { y: 0, opacity: 1, duration: 1.4, ease: 'power3.out', delay: 0.1 });
+      sectionRefs.current.forEach(ref => {
+        if (!ref) return;
+        const els = ref.querySelectorAll('.fade-up');
+        if (els.length) gsap.fromTo(els, { y: 60, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.1, duration: 1, ease: 'power3.out', scrollTrigger: { trigger: ref, start: 'top 85%' } });
       });
     });
     return () => ctx.revert();
   }, []);
 
-  const navBg = scrolled ? 'rgba(10,10,10,0.92)' : 'transparent';
-  const navBorder = scrolled ? '1px solid rgba(235,235,229,0.08)' : '1px solid transparent';
+  const navClass = scrolled ? 'nav scrolled' : 'nav';
 
   return (
-    <div style={{ background: '#0A0A0A', color: '#EBEBE5', minHeight: '100vh', overflowX: 'hidden', fontFamily: FF.sans }}>
-      {/* Nav */}
-      <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, padding: '16px 0', background: navBg, borderBottom: navBorder, backdropFilter: 'blur(12px)', transition: 'background 0.3s' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <a href="#" style={{ fontSize: 18, fontWeight: 700, color: '#EBEBE5', textDecoration: 'none' }}>NightSignals</a>
-          <div className="hide-mobile" style={{ display: 'flex', gap: 32 }}>
-            <a href="#privacy" style={navLink}>Privacy</a>
-            <a href="#contract" style={navLink}>Contract</a>
-            <a href="https://github.com/subheeksh5599/nightsignals" target="_blank" rel="noopener" style={navLink}>GitHub</a>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            {wallet.isConnected ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#3fb950' }} />
-                <span style={{ fontSize: 12, fontFamily: FF.mono, color: 'rgba(235,235,229,0.45)' }}>{wallet.address}</span>
-                <button onClick={() => setWallet({ isConnected: false, address: null, coinPublicKey: null, error: null })} style={btnGhost}>Disconnect</button>
-              </div>
-            ) : (
-              <button onClick={handleConnect} style={btnPrimary}>Connect Lace</button>
-            )}
-          </div>
-        </div>
-      </nav>
-
-      {/* Hero */}
-      <section ref={heroRef} style={{ padding: '200px 32px 120px', maxWidth: 1280, margin: '0 auto', minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-        <div data-hero style={{ maxWidth: 780 }}>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 32 }}>
-            <span style={tag}>Midnight Preprod</span>
-            <span style={tag}>Compact v0.23</span>
-          </div>
-          <h1 style={{ fontSize: 64, fontWeight: 700, lineHeight: 1.08, letterSpacing: '-0.03em', marginBottom: 24 }}>the insight is proven,<br />not shown</h1>
-          <p style={{ fontSize: 16, lineHeight: 1.7, color: 'rgba(235,235,229,0.45)', maxWidth: 560, marginBottom: 40 }}>
-            A privacy-preserving marketplace for trading signals. Creators sell insights with cryptographic proof of authenticity. Buyers verify on-chain without the content ever touching the public ledger. Built on Midnight&apos;s selective disclosure.
-          </p>
-          <div style={{ display: 'flex', gap: 16, marginBottom: 48 }}>
-            <button onClick={handleConnect} style={btnPrimary}>{wallet.isConnected ? 'Connected' : 'Connect Lace Wallet'}</button>
-            <a href="#contract" style={btnGhost}>View Contract</a>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-            <span style={monoLabel}>Contract {CONTRACT.slice(0, 8)}...{CONTRACT.slice(-6)}</span>
-            <span style={{ width: 3, height: 3, borderRadius: '50%', background: 'rgba(235,235,229,0.08)' }} />
-            <span style={monoLabel}>13 tests passing</span>
-            <span style={{ width: 3, height: 3, borderRadius: '50%', background: 'rgba(235,235,229,0.08)' }} />
-            <span style={monoLabel}>3 ZK circuits</span>
-          </div>
-        </div>
-      </section>
-
-      {/* Privacy */}
-      <section id="privacy" ref={privacyRef} className="section">
-        <div className="section-hd">
-          <span className="section-num">01</span>
-          <h2 className="section-title">Privacy Model</h2>
-          <p style={{ fontSize: 15, lineHeight: 1.7, color: 'rgba(235,235,229,0.45)' }}>
-            What an observer can and cannot learn from the public ledger. Selective disclosure is the core primitive. The chain verifies the trade without ever seeing what was traded.
-          </p>
-        </div>
-        <div className="grid-2" style={{ border: '1px solid rgba(235,235,229,0.08)', borderRadius: 8, overflow: 'hidden' }}>
-          <div data-fade style={cell}>
-            <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', fontFamily: FF.mono, letterSpacing: '0.08em', color: '#EBEBE5', marginBottom: 24 }}>Public — stored on-chain</div>
-            {publicData.map(([k, v]) => (
-              <div key={k} style={row}><span style={keyStyle}>{k}</span><span style={valStyle}>{v}</span></div>
-            ))}
-          </div>
-          <div data-fade style={cell}>
-            <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', fontFamily: FF.mono, letterSpacing: '0.08em', color: '#6C5CE7', marginBottom: 24 }}>Private — never leaves the witness</div>
-            {privateData.map(([k, v]) => (
-              <div key={k} style={row}><span style={keyStyle}>{k}</span><span style={{ ...valStyle, color: '#6C5CE7' }}>{v}</span></div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* How It Works */}
-      <section id="how" ref={howRef} className="section">
-        <div className="section-hd">
-          <span className="section-num">02</span>
-          <h2 className="section-title">How It Works</h2>
-          <p style={{ fontSize: 15, lineHeight: 1.7, color: 'rgba(235,235,229,0.45)' }}>Four steps from creation to verification. Every action is a ZK circuit call on Midnight.</p>
-        </div>
-        <div className="grid-4" style={{ border: '1px solid rgba(235,235,229,0.08)', borderRadius: 8, overflow: 'hidden' }}>
-          {steps.map(([n, t, b]) => (
-            <div key={n} data-fade style={cell}>
-              <span className="section-num">{n}</span>
-              <h3 style={{ fontSize: 18, fontWeight: 700, margin: '16px 0 8px' }}>{t}</h3>
-              <p style={{ fontSize: 13, lineHeight: 1.65, color: 'rgba(235,235,229,0.45)' }}>{b}</p>
+    <>
+      <style>{css}</style>
+      <div className="page">
+        {/* Nav */}
+        <nav className={navClass}>
+          <div className="nav-inner">
+            <a href="#" className="logo">NightSignals<span className="logo-dot">.</span></a>
+            <div className="nav-links">
+              <a href="#privacy">Privacy</a>
+              <a href="#how">How</a>
+              <a href="#contract">Contract</a>
+              <a href="https://github.com/subheeksh5599/nightsignals" target="_blank" rel="noopener">GitHub ↗</a>
             </div>
-          ))}
-        </div>
-      </section>
+            <div className="nav-actions">
+              {wallet.isConnected ? (
+                <div className="wallet-badge">
+                  <span className="wallet-dot" />
+                  <span className="wallet-addr">{wallet.address}</span>
+                  <button onClick={() => setWallet({ isConnected: false, address: null, coinPublicKey: null, error: null })} className="btn-ghost-sm">Disconnect</button>
+                </div>
+              ) : (
+                <button onClick={connect} className="btn-primary">Connect Lace</button>
+              )}
+            </div>
+          </div>
+        </nav>
 
-      {/* Contract */}
-      <section id="contract" ref={contractRef} className="section">
-        <div className="section-hd">
-          <span className="section-num">03</span>
-          <h2 className="section-title">Contract</h2>
-        </div>
-        <div data-fade style={{ background: '#141414', border: '1px solid rgba(235,235,229,0.08)', borderRadius: 8, padding: 32, marginBottom: 32, overflow: 'auto' }}>
-          <pre style={{ fontFamily: FF.mono, fontSize: 12, lineHeight: 1.7, color: 'rgba(235,235,229,0.45)', margin: 0 }}>{`pragma language_version 0.23;
+        {/* Hero */}
+        <section className="hero">
+          <div className="hero-content">
+            <div className="hero-tags">
+              <span>Midnight Preprod</span>
+              <span className="tag-sep"></span>
+              <span>Compact v0.23</span>
+            </div>
+            <h1 className="hero-title">
+              <span className="hero-line">Privacy-preserving</span>
+              <span className="hero-line accent">insight marketplace</span>
+            </h1>
+            <p className="hero-desc">
+              Creators sell signals with cryptographic proof. Buyers verify on-chain. 
+              Nobody sees the content except the two parties. Built on Midnight&apos;s selective 
+              disclosure — the chain confirms the trade without ever seeing what was traded.
+            </p>
+            <div className="hero-actions">
+              <button onClick={connect} className="btn-primary-lg">
+                {wallet.isConnected ? 'Wallet Connected' : 'Connect Lace Wallet'}
+              </button>
+              <a href="#privacy" className="btn-outline-lg">Explore</a>
+            </div>
+            <div className="hero-stats">
+              <div className="hero-stat">
+                <span className="hero-stat-num">3</span>
+                <span className="hero-stat-label">ZK Circuits</span>
+              </div>
+              <div className="hero-stat">
+                <span className="hero-stat-num">13</span>
+                <span className="hero-stat-label">Tests Passing</span>
+              </div>
+              <div className="hero-stat">
+                <span className="hero-stat-num">50</span>
+                <span className="hero-stat-label">Preprod Users</span>
+              </div>
+            </div>
+          </div>
+          <div className="hero-contract">
+            <span>Contract</span>
+            <code>{CONTRACT.slice(0, 10)}...{CONTRACT.slice(-8)}</code>
+          </div>
+        </section>
 
-export circuit createSignal(price: Uint<64>, content: Bytes<32>): [] {
+        {/* Divider */}
+        <div className="divider" />
+
+        {/* Privacy */}
+        <section id="privacy" ref={el => { sectionRefs.current[0] = el; }}>
+          <div className="section-hd fade-up">
+            <span className="section-label">Selective Disclosure</span>
+            <h2>The chain verifies the trade.<br />It never sees the content.</h2>
+            <p>Every signal is proven authentic without revealing the insight. This is the primitive that Midnight enables and no transparent chain can replicate.</p>
+          </div>
+          <div className="privacy-grid fade-up">
+            <div className="privacy-card">
+              <div className="privacy-card-hd">
+                <span className="privacy-icon">◈</span>
+                <div>
+                  <span className="privacy-card-label">Public Ledger</span>
+                  <p className="privacy-card-sub">Visible to everyone</p>
+                </div>
+              </div>
+              <div className="privacy-rows">
+                {[
+                  ['Content Hash', '0x3f8a...b12d', 'Anyone can verify the hash'],
+                  ['Price', '50 tNIGHT', 'Listed publicly'],
+                  ['Buyer Count', '3 purchases', 'Visible on-chain'],
+                  ['Creator Identity', 'ZK-derived', 'Commitment, not wallet'],
+                  ['Active Status', 'True', 'State on ledger'],
+                ].map(([k, v, d]) => (
+                  <div key={k} className="privacy-row">
+                    <div>
+                      <span className="privacy-key">{k}</span>
+                      <span className="privacy-desc">{d}</span>
+                    </div>
+                    <code className="privacy-val">{v}</code>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="privacy-card private">
+              <div className="privacy-card-hd">
+                <span className="privacy-icon">◆</span>
+                <div>
+                  <span className="privacy-card-label">Private Witness</span>
+                  <p className="privacy-card-sub">Never touches the chain</p>
+                </div>
+              </div>
+              <div className="privacy-rows">
+                {[
+                  ['Signal Content', 'Encrypted', 'Only creator and buyer'],
+                  ['Creator Wallet', 'Untraceable', 'Hidden behind ZK identity'],
+                  ['Buyer Identity', 'Shielded', 'Not stored on-chain'],
+                  ['Decryption Key', 'Local witness', 'Never leaves device'],
+                  ['Purchase Link', 'Not recorded', 'No transaction graph'],
+                ].map(([k, v, d]) => (
+                  <div key={k} className="privacy-row">
+                    <div>
+                      <span className="privacy-key">{k}</span>
+                      <span className="privacy-desc">{d}</span>
+                    </div>
+                    <code className="privacy-val accent">{v}</code>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* How */}
+        <section id="how" ref={el => { sectionRefs.current[1] = el; }}>
+          <div className="section-hd fade-up">
+            <span className="section-label">Four Steps</span>
+            <h2>Every action is a<br />ZK circuit call</h2>
+          </div>
+          <div className="how-grid">
+            {[
+              { n: '01', t: 'Create Signal', b: 'Creator hashes the insight inside a ZK circuit. The content hash is disclosed to the ledger. The raw content stays in the private witness — the chain never touches it.' },
+              { n: '02', t: 'Purchase Access', b: 'Buyer pays tNIGHT via receiveUnshielded. The transaction is publicly visible but no buyer identity is stored. The signal remains private between creator and buyer.' },
+              { n: '03', t: 'Off-chain Delivery', b: 'Creator sends the signal content directly to the buyer through any channel — Discord, email, encrypted DM. The chain holds the proof, not the payload.' },
+              { n: '04', t: 'Verify Authenticity', b: 'Buyer hashes the received content and compares it to the on-chain contentHash. A match proves the signal is authentic. A mismatch is cryptographic proof of fraud.' },
+            ].map((s, i) => (
+              <div key={i} className="how-card fade-up">
+                <span className="how-num">{s.n}</span>
+                <h3 className="how-title">{s.t}</h3>
+                <p className="how-desc">{s.b}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Contract */}
+        <section id="contract" ref={el => { sectionRefs.current[2] = el; }}>
+          <div className="section-hd fade-up">
+            <span className="section-label">Compact v0.23</span>
+            <h2>On-chain, verifiable,<br />open source</h2>
+          </div>
+          <div className="contract-grid fade-up">
+            <div className="code-block">
+              <div className="code-header">
+                <span className="code-dots"><i></i><i></i><i></i></span>
+                <span>nightsignals.compact</span>
+              </div>
+              <pre className="code-body">{`export circuit createSignal(
+  price: Uint<64>,
+  content: Bytes<32>
+): [] {
   const sk = localSecretKey();
   const creator = ownerCommitment(sk);
   const contentHash = persistentHash([
     pad(32, "ns:content:"), content
   ]);
+
   signals.insert(nextId.read(), SignalInfo {
     creator: disclose(creator),
     price: disclose(price),
@@ -207,74 +240,240 @@ export circuit createSignal(price: Uint<64>, content: Bytes<32>): [] {
     buyerCount: disclose(0 as Uint<64>),
   });
 }`}</pre>
-        </div>
-        <div data-fade className="grid-4" style={{ border: '1px solid rgba(235,235,229,0.08)', borderRadius: 8, overflow: 'hidden' }}>
-          {metaFields.map(([l, v]) => (
-            <div key={l} style={{ background: '#141414', padding: '20px 24px', border: '1px solid rgba(235,235,229,0.08)' }}>
-              <span style={{ fontSize: 10, fontWeight: 600, color: 'rgba(235,235,229,0.45)', textTransform: 'uppercase', fontFamily: FF.mono, letterSpacing: '0.08em' }}>{l}</span>
-              <div style={{ fontSize: 13, color: '#EBEBE5', marginTop: 4, fontFamily: l === 'Address' ? FF.mono : undefined }}>{v}</div>
             </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Stats */}
-      <section ref={trustRef} className="section">
-        <div className="section-hd">
-          <span className="section-num">04</span>
-          <h2 className="section-title">Verified</h2>
-        </div>
-        <div className="grid-4" style={{ border: '1px solid rgba(235,235,229,0.08)', borderRadius: 8, overflow: 'hidden' }}>
-          {statsData.map(([stat, label, desc]) => (
-            <div key={label} data-fade style={{ background: '#141414', padding: 32, border: '1px solid rgba(235,235,229,0.08)', textAlign: 'center' }}>
-              <div style={{ fontSize: 48, fontWeight: 700, color: '#6C5CE7', fontFamily: FF.mono, marginBottom: 8 }}>{stat}</div>
-              <div style={{ fontSize: 13, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.03em', marginBottom: 4 }}>{label}</div>
-              <div style={{ fontSize: 12, color: 'rgba(235,235,229,0.45)', lineHeight: 1.5 }}>{desc}</div>
+            <div className="contract-meta">
+              {[
+                ['Network', 'Midnight Preprod'],
+                ['Language', 'Compact v0.23'],
+                ['Circuits', '3 (create, purchase, deactivate)'],
+                ['Tests', '13/13 passing'],
+                ['License', 'MIT'],
+                ['Contract', CONTRACT.slice(0, 12) + '...' + CONTRACT.slice(-8)],
+              ].map(([l, v]) => (
+                <div key={l} className="meta-item">
+                  <span className="meta-label">{l}</span>
+                  <span className="meta-val">{v}</span>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section style={{ maxWidth: 1280, margin: '0 auto', padding: '120px 32px 160px', textAlign: 'center' }}>
-        <div data-fade style={{ maxWidth: 600, margin: '0 auto' }}>
-          <h2 style={{ fontSize: 36, fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 16 }}>Ready to trade with proof, not trust?</h2>
-          <p style={{ fontSize: 15, lineHeight: 1.7, color: 'rgba(235,235,229,0.45)', marginBottom: 32 }}>
-            Connect your Lace wallet to create and purchase signals on Midnight Preprod. Every transaction is a ZK circuit call. Verifiable, private, and immutable.
-          </p>
-          <div style={{ display: 'flex', gap: 16, justifyContent: 'center' }}>
-            <button onClick={handleConnect} style={btnPrimary}>{wallet.isConnected ? 'Launch App' : 'Connect Lace Wallet'}</button>
-            <a href="https://github.com/subheeksh5599/nightsignals" target="_blank" rel="noopener" style={btnGhost}>View on GitHub</a>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Footer */}
-      <footer style={{ borderTop: '1px solid rgba(235,235,229,0.08)', padding: '40px 32px' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 14, fontWeight: 700 }}>NightSignals</span>
-          <div style={{ display: 'flex', gap: 24 }}>
-            <a href="https://github.com/subheeksh5599/nightsignals" target="_blank" rel="noopener" style={{ fontSize: 12, color: 'rgba(235,235,229,0.45)', textDecoration: 'none', fontFamily: FF.mono }}>GitHub</a>
-            <a href="https://x.com/NightSignals_" target="_blank" rel="noopener" style={{ fontSize: 12, color: 'rgba(235,235,229,0.45)', textDecoration: 'none', fontFamily: FF.mono }}>X</a>
-            <a href="https://midnight.network" target="_blank" rel="noopener" style={{ fontSize: 12, color: 'rgba(235,235,229,0.45)', textDecoration: 'none', fontFamily: FF.mono }}>Midnight</a>
+        {/* Verified */}
+        <section ref={el => { sectionRefs.current[3] = el; }}>
+          <div className="section-hd fade-up">
+            <span className="section-label">Trust Layer</span>
+            <h2>Verified by the chain,<br />validated by users</h2>
           </div>
-          <span style={{ fontSize: 12, color: 'rgba(235,235,229,0.45)' }}>MIT Licensed. Built for Midnight Network.</span>
-        </div>
-      </footer>
+          <div className="verified-grid fade-up">
+            {[
+              { n: '13', l: 'Tests', d: 'Contract verification, circuit integrity, and key validation — all passing on every push.' },
+              { n: '50', l: 'Users', d: 'Verifiable preprod wallet addresses with on-chain activity on the nightsignals contract.' },
+              { n: '3', l: 'Circuits', d: 'createSignal for listing, purchaseSignal for buying, deactivateSignal for lifecycle management.' },
+              { n: '4.3', l: 'Rating', d: 'Average user satisfaction across 50 structured feedback responses from real testers.' },
+            ].map((s, i) => (
+              <div key={i} className="verified-card fade-up">
+                <span className="verified-num">{s.n}</span>
+                <span className="verified-label">{s.l}</span>
+                <p className="verified-desc">{s.d}</p>
+              </div>
+            ))}
+          </div>
+        </section>
 
+        {/* Quote */}
+        <section className="quote-section fade-up">
+          <blockquote>
+            <p>&ldquo;Anyone can claim a 90% win rate. There&apos;s no cryptographic proof. NightSignals changes that — immutable content hashes on-chain make creator reputation verifiable, not claimed.&rdquo;</p>
+          </blockquote>
+        </section>
+
+        {/* CTA */}
+        <section className="cta fade-up">
+          <h2>Trade with proof,<br />not trust.</h2>
+          <p>Connect your Lace wallet to create and purchase signals on Midnight Preprod. Every transaction is a ZK circuit call — verifiable, private, and immutable.</p>
+          <div className="cta-actions">
+            <button onClick={connect} className="btn-primary-lg">{wallet.isConnected ? 'Launch App' : 'Connect Lace Wallet'}</button>
+            <a href="https://github.com/subheeksh5599/nightsignals" target="_blank" rel="noopener" className="btn-outline-lg">GitHub</a>
+          </div>
+        </section>
+
+        {/* Footer */}
+        <footer className="footer">
+          <div className="footer-inner">
+            <div className="footer-brand">
+              <span className="footer-logo">NightSignals<span className="logo-dot">.</span></span>
+              <span className="footer-by">Built for Midnight Network. MIT Licensed.</span>
+            </div>
+            <div className="footer-links">
+              <a href="https://github.com/subheeksh5599/nightsignals" target="_blank" rel="noopener">GitHub</a>
+              <a href="https://x.com/NightSignals_" target="_blank" rel="noopener">X / Twitter</a>
+              <a href="https://midnight.network" target="_blank" rel="noopener">Midnight</a>
+            </div>
+          </div>
+        </footer>
+      </div>
       <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" async />
       <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js" async />
-    </div>
+    </>
   );
 }
 
-// Shared styles
-const navLink: React.CSSProperties = { fontSize: 13, fontWeight: 500, color: 'rgba(235,235,229,0.45)', textDecoration: 'none', textTransform: 'uppercase', letterSpacing: '0.03em' };
-const btnPrimary: React.CSSProperties = { padding: '12px 28px', borderRadius: 6, border: 'none', background: '#6C5CE7', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: FF.sans };
-const btnGhost: React.CSSProperties = { padding: '12px 28px', borderRadius: 6, border: '1px solid rgba(235,235,229,0.08)', background: 'transparent', color: '#EBEBE5', fontSize: 14, fontWeight: 600, cursor: 'pointer', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', fontFamily: FF.sans };
-const tag: React.CSSProperties = { padding: '4px 12px', borderRadius: 4, border: '1px solid rgba(235,235,229,0.08)', fontSize: 11, fontWeight: 600, color: 'rgba(235,235,229,0.45)', textTransform: 'uppercase', fontFamily: FF.mono, letterSpacing: '0.05em' };
-const monoLabel: React.CSSProperties = { fontSize: 12, fontFamily: FF.mono, color: 'rgba(235,235,229,0.45)' };
-const cell: React.CSSProperties = { background: '#141414', padding: 32, border: '1px solid rgba(235,235,229,0.08)' };
-const row: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(235,235,229,0.08)' };
-const keyStyle: React.CSSProperties = { fontSize: 13, color: 'rgba(235,235,229,0.45)' };
-const valStyle: React.CSSProperties = { fontSize: 13, fontFamily: FF.mono, color: '#EBEBE5' };
+const css = `
+  :root {
+    --bg: #08080c;
+    --surface: #111118;
+    --surface2: #181820;
+    --border: rgba(255,255,255,0.06);
+    --border2: rgba(255,255,255,0.10);
+    --text: #e8e8ed;
+    --text2: rgba(232,232,237,0.60);
+    --text3: rgba(232,232,237,0.35);
+    --accent: #6C5CE7;
+    --accent2: #7B6CF6;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { background: var(--bg); color: var(--text); font-family: 'Inter', -apple-system, sans-serif; -webkit-font-smoothing: antialiased; }
+  ::selection { background: var(--accent); color: #fff; }
+  .page { min-height: 100vh; overflow-x: hidden; }
+
+  /* Nav */
+  .nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; padding: 18px 0; transition: all 0.3s; }
+  .nav.scrolled { background: rgba(8,8,12,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border); }
+  .nav-inner { max-width: 1240px; margin: 0 auto; padding: 0 40px; display: flex; align-items: center; justify-content: space-between; }
+  .logo { font-size: 20px; font-weight: 700; color: var(--text); text-decoration: none; letter-spacing: -0.02em; }
+  .logo-dot { color: var(--accent); }
+  .nav-links { display: flex; gap: 36px; align-items: center; }
+  .nav-links a { font-size: 13px; font-weight: 500; color: var(--text2); text-decoration: none; letter-spacing: 0.02em; transition: color 0.2s; }
+  .nav-links a:hover { color: var(--text); }
+  .nav-actions { display: flex; align-items: center; gap: 16px; }
+
+  /* Hero */
+  .hero { max-width: 1240px; margin: 0 auto; padding: 200px 40px 120px; min-height: 100vh; display: flex; flex-direction: column; justify-content: center; position: relative; }
+  .hero-content { max-width: 680px; }
+  .hero-tags { display: flex; align-items: center; gap: 12px; margin-bottom: 32px; font-size: 12px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; font-family: 'JetBrains Mono', monospace; }
+  .tag-sep { width: 4px; height: 4px; border-radius: 50%; background: var(--accent); }
+  .hero-title { font-size: clamp(48px, 7vw, 80px); font-weight: 700; line-height: 1.06; letter-spacing: -0.03em; margin-bottom: 28px; }
+  .hero-line { display: block; }
+  .hero-line.accent { color: var(--accent); }
+  .hero-desc { font-size: 17px; line-height: 1.7; color: var(--text2); max-width: 560px; margin-bottom: 40px; }
+  .hero-actions { display: flex; gap: 16px; margin-bottom: 64px; }
+  .hero-stats { display: flex; gap: 48px; padding-top: 32px; border-top: 1px solid var(--border); }
+  .hero-stat { display: flex; flex-direction: column; gap: 4px; }
+  .hero-stat-num { font-size: 32px; font-weight: 700; color: var(--accent); font-family: 'JetBrains Mono', monospace; }
+  .hero-stat-label { font-size: 13px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 500; }
+  .hero-contract { position: absolute; bottom: 60px; right: 40px; display: flex; align-items: center; gap: 12px; padding: 10px 18px; border: 1px solid var(--border2); border-radius: var(--radius-sm); font-size: 12px; color: var(--text3); }
+  .hero-contract span { text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; font-size: 10px; }
+  .hero-contract code { font-family: 'JetBrains Mono', monospace; color: var(--text2); }
+
+  /* Divider */
+  .divider { max-width: 1240px; margin: 0 auto; padding: 0 40px; }
+  .divider::after { content: ''; display: block; height: 1px; background: var(--border); }
+
+  /* Sections */
+  section { max-width: 1240px; margin: 0 auto; padding: 140px 40px; }
+  .section-hd { margin-bottom: 72px; max-width: 600px; }
+  .section-label { font-size: 11px; font-weight: 600; color: var(--accent); text-transform: uppercase; letter-spacing: 0.12em; font-family: 'JetBrains Mono', monospace; margin-bottom: 20px; display: block; }
+  .section-hd h2 { font-size: clamp(32px, 5vw, 52px); font-weight: 700; line-height: 1.12; letter-spacing: -0.02em; margin-bottom: 16px; }
+  .section-hd p { font-size: 16px; line-height: 1.7; color: var(--text2); }
+
+  /* Privacy */
+  .privacy-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; background: var(--border); }
+  .privacy-card { background: var(--surface); padding: 40px; }
+  .privacy-card.private { border-left: 1px solid var(--border); }
+  .privacy-card-hd { display: flex; gap: 16px; align-items: flex-start; margin-bottom: 32px; }
+  .privacy-icon { font-size: 20px; color: var(--accent); margin-top: 2px; }
+  .privacy-card.private .privacy-icon { color: var(--accent2); }
+  .privacy-card-label { font-size: 15px; font-weight: 600; color: var(--text); display: block; margin-bottom: 2px; }
+  .privacy-card-sub { font-size: 13px; color: var(--text3); }
+  .privacy-rows { display: flex; flex-direction: column; }
+  .privacy-row { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--border); }
+  .privacy-row:last-child { border-bottom: none; }
+  .privacy-key { font-size: 13px; font-weight: 500; color: var(--text2); display: block; margin-bottom: 2px; }
+  .privacy-desc { font-size: 11px; color: var(--text3); }
+  .privacy-val { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text); }
+  .privacy-val.accent { color: var(--accent2); }
+
+  /* How */
+  .how-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; background: var(--border); }
+  .how-card { background: var(--surface); padding: 36px; position: relative; }
+  .how-num { font-size: 12px; font-weight: 600; color: var(--accent); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.06em; margin-bottom: 20px; display: block; }
+  .how-title { font-size: 18px; font-weight: 600; margin-bottom: 12px; letter-spacing: -0.01em; }
+  .how-desc { font-size: 13px; line-height: 1.7; color: var(--text2); }
+
+  /* Contract */
+  .contract-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 24px; align-items: start; }
+  .code-block { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .code-header { display: flex; align-items: center; gap: 12px; padding: 14px 20px; border-bottom: 1px solid var(--border); font-size: 12px; color: var(--text3); font-family: 'JetBrains Mono', monospace; }
+  .code-dots { display: flex; gap: 6px; }
+  .code-dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--border2); display: block; }
+  .code-dots i:first-child { background: #ff5f56; }
+  .code-dots i:nth-child(2) { background: #ffbd2e; }
+  .code-body { padding: 24px; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.8; color: var(--text2); overflow-x: auto; white-space: pre; margin: 0; }
+  .contract-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; background: var(--border); }
+  .meta-item { background: var(--surface); padding: 20px 24px; }
+  .meta-label { font-size: 10px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; font-family: 'JetBrains Mono', monospace; display: block; margin-bottom: 6px; }
+  .meta-val { font-size: 14px; font-weight: 500; color: var(--text); font-family: 'JetBrains Mono', monospace; word-break: break-all; }
+
+  /* Verified */
+  .verified-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; background: var(--border); }
+  .verified-card { background: var(--surface); padding: 36px 28px; text-align: center; }
+  .verified-num { font-size: 44px; font-weight: 700; color: var(--accent); font-family: 'JetBrains Mono', monospace; display: block; margin-bottom: 8px; }
+  .verified-label { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 10px; }
+  .verified-desc { font-size: 13px; line-height: 1.6; color: var(--text2); }
+
+  /* Quote */
+  .quote-section { max-width: 800px; margin: 0 auto; padding: 0 40px 100px; }
+  .quote-section blockquote { border-left: 3px solid var(--accent); padding-left: 32px; }
+  .quote-section p { font-size: 22px; line-height: 1.5; color: var(--text2); font-style: italic; font-weight: 400; }
+
+  /* CTA */
+  .cta { text-align: center; padding: 140px 40px 160px; }
+  .cta h2 { font-size: clamp(36px, 5vw, 56px); font-weight: 700; letter-spacing: -0.02em; margin-bottom: 20px; }
+  .cta p { font-size: 17px; line-height: 1.7; color: var(--text2); max-width: 560px; margin: 0 auto 36px; }
+  .cta-actions { display: flex; gap: 16px; justify-content: center; }
+
+  /* Footer */
+  .footer { border-top: 1px solid var(--border); padding: 48px 40px; }
+  .footer-inner { max-width: 1240px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; }
+  .footer-brand { display: flex; flex-direction: column; gap: 6px; }
+  .footer-logo { font-size: 16px; font-weight: 700; }
+  .footer-by { font-size: 12px; color: var(--text3); }
+  .footer-links { display: flex; gap: 32px; }
+  .footer-links a { font-size: 13px; color: var(--text2); text-decoration: none; transition: color 0.2s; }
+  .footer-links a:hover { color: var(--text); }
+
+  /* Buttons */
+  .btn-primary, .btn-primary-lg { padding: 12px 28px; border-radius: var(--radius-sm); border: none; background: var(--accent); color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; transition: background 0.2s; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; }
+  .btn-primary:hover, .btn-primary-lg:hover { background: var(--accent2); }
+  .btn-primary-lg { padding: 16px 36px; font-size: 15px; border-radius: var(--radius); }
+  .btn-outline-lg { padding: 16px 36px; border-radius: var(--radius); border: 1px solid var(--border2); background: transparent; color: var(--text); font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit; text-decoration: none; display: inline-flex; align-items: center; transition: border-color 0.2s; }
+  .btn-outline-lg:hover { border-color: var(--text3); }
+  .btn-ghost-sm { padding: 6px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: transparent; color: var(--text2); font-size: 12px; font-weight: 500; cursor: pointer; font-family: inherit; }
+
+  /* Wallet */
+  .wallet-badge { display: flex; align-items: center; gap: 10px; }
+  .wallet-dot { width: 7px; height: 7px; border-radius: 50%; background: #3fb950; }
+  .wallet-addr { font-size: 12px; font-family: 'JetBrains Mono', monospace; color: var(--text3); }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .nav-links { display: none; }
+    .privacy-grid, .how-grid, .verified-grid { grid-template-columns: 1fr; }
+    .contract-grid { grid-template-columns: 1fr; }
+    .hero { padding: 160px 24px 80px; }
+    section { padding: 80px 24px; }
+    .hero-stats { gap: 24px; flex-wrap: wrap; }
+    .hero-contract { display: none; }
+  }
+
+  @media (max-width: 600px) {
+    .hero-title { font-size: 40px; }
+    .section-hd h2 { font-size: 28px; }
+    .footer-inner { flex-direction: column; gap: 24px; text-align: center; }
+    .footer-links { gap: 20px; }
+  }
+`;
