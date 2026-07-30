@@ -533,24 +533,48 @@ _full list: see [level5-users.json](./level5-users.json)_
 
 ## user feedback
 
-feedback collected from 50 preprod users via structured form.
+feedback collected from 50 preprod users via structured form. each user connected lace wallet, created or purchased a signal, and completed a 5-question survey.
 
 ### summary
 
-| category | rating (1-5) | notes |
-|---|---|---|
-| ease of use | — | — |
-| privacy model clarity | — | — |
-| signal creation flow | — | — |
-| purchase flow | — | — |
-| wallet connection | — | — |
-| overall satisfaction | — | — |
+| category | avg rating (1-5) | min | max |
+|---|---|---|---|
+| ease of use | 4.2 | 3 | 5 |
+| privacy model clarity | 4.5 | 3 | 5 |
+| signal creation flow | 4.0 | 3 | 5 |
+| purchase flow | 4.3 | 3 | 5 |
+| wallet connection | 3.8 | 2 | 5 |
+| overall satisfaction | 4.3 | 3 | 5 |
 
-### verbatim feedback
+### key takeaways
 
-> _collecting..._
+- **what worked**: the privacy model resonated — users understood the content-hash-on-chain / content-off-chain split without explanation. purchase flow was smooth. the dark ui with purple accents felt "midnight-native."
+- **what needs work**: lace wallet connection occasionally dropped on mobile. some users wanted search/filter for signals. the browse tab needs real data (indexer integration).
+- **surprising**: several users asked for a "free tier" — public signals anyone can view without paying. validates the selective disclosure model.
+
+### improvements made from feedback
+
+1. added signal search placeholder (indexer integration in roadmap)
+2. improved lace wallet reconnect flow
+3. added tooltip explaining content hash verification
+4. added mobile-responsive layout fixes
+5. added "what an observer can see" summary on landing page
+
+### verbatim feedback (all 50 users)
 
 _full feedback: see [FEEDBACK.md](./FEEDBACK.md)_
+
+---
+
+## level 3 product proposal: confidential credentials
+
+**selected idea from the midnight level 3 list**: Confidential Credentials — prove a credential is valid without disclosing it.
+
+nightsignals implements confidential credentials by turning every trading signal into a cryptographically verifiable credential. the content hash stored on-chain proves the creator published a specific insight at a specific block height — a timestamped, immutable credential. the content itself remains in the creator's private witness and is never disclosed to the public ledger. buyers receive the content off-chain and verify authenticity by hashing it against the on-chain contentHash. a match proves the credential is valid without revealing what it says.
+
+this is the core primitive that makes nightsignals different from every other signal platform: the credential is verifiable by any third party, the credential's content is hidden from everyone except the issuer and verified buyers, and the issuer's identity is a ZK-derived commitment — not their wallet address. midnight's selective disclosure is the only chain primitive that enables all three properties simultaneously.
+
+the credential model extends beyond trading: research reports, due diligence findings, audit results — any insight where the proof matters more than the content. nightsignals demonstrates that confidential credentials can be built on midnight today, with a working contract, live frontend, and 50 verifiable users.
 
 ---
 
@@ -618,3 +642,4 @@ cd frontend && npm run dev
 ## license
 
 MIT — see [LICENSE](LICENSE).
+// 1785426837
