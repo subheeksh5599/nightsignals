@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { listWallets, selectFirstWallet, connectWallet } from '@/lib/wallet';
+import { listWallets, connectWallet } from '@/lib/wallet';
 import type { WalletState } from '@/lib/types';
 
 declare global { interface Window { gsap?: any; ScrollTrigger?: any; } }
@@ -21,11 +21,11 @@ export default function HomePage() {
     try {
       const wallets = listWallets();
       if (!wallets.length) {
-        setWallet(w => ({ ...w, error: 'Lace wallet not detected. Please install the Lace browser extension for Midnight Network.' }));
+        setWallet(w => ({ ...w, error: 'Lace wallet not detected. Is the Lace extension installed and unlocked? Open Lace and make sure you are on Midnight Preprod network.' }));
         setConnecting(false);
         return;
       }
-      const api = await connectWallet(selectFirstWallet());
+      const api = await connectWallet(wallets[0].key);
       const pk = await api.getCoinPublicKey();
       setWallet({ isConnected: true, address: pk.slice(0, 12) + '...' + pk.slice(-6), coinPublicKey: pk, error: null });
     } catch (err: unknown) {

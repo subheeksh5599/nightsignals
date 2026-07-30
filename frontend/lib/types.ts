@@ -7,4 +7,5 @@ export interface WalletState {
 
 export interface API {
   getCoinPublicKey: () => Promise<string>;
+  connected?: any;
 }
