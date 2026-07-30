@@ -31,3 +31,4 @@ export async function connectWallet(wallet: InitialAPI): Promise<API> {
 // clear stale wallet state when switching networks
 // 1785426837
 // 1785426837
+// 1785426837
