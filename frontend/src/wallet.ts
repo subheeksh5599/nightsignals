@@ -30,3 +30,4 @@ export async function connectWallet(wallet: InitialAPI): Promise<API> {
 // retry wallet connection up to 3 times on transient
 // clear stale wallet state when switching networks
 // 1785426837
+// 1785426837
