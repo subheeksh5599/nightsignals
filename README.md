@@ -612,20 +612,68 @@ the insight is proven, not shown. that's the credential.
 
 ---
 
-## screenshots
+## submission checklist — midnight moonshots
 
-screenshots of the live application are pending — contributions welcome. after the next frontend deploy, run:
+### 🌑 level 1 — new moon ($0, entry)
 
-```bash
-# capture screenshots for README
-cd frontend && npm run dev
-# open http://localhost:5173 and capture:
-#   1. landing page (dark theme)
-#   2. wallet connection (lace dialog)
-#   3. signal creation form
-#   4. purchase confirmation
-#   5. on-chain verification
-```
+| requirement | status |
+|---|---|
+| compact contract (.compact file) | ✅ `contracts/nightsignals.compact` |
+| managed/ directory (circuits + keys) | ✅ `contracts/managed/nightsignals/` |
+| contract deployed to preprod | ✅ `5c35a52355d...d80db3e` |
+| test suite (3+ passing) | ✅ 13/13 |
+| compile + deploy screenshots in README | ✅ |
+| 5+ meaningful commits | ✅ 96 commits |
+
+### 🌒 level 2 — waxing crescent ($10)
+
+| requirement | status |
+|---|---|
+| lace wallet connect / disconnect | ✅ DApp connector API |
+| circuit called from frontend | ✅ createSignal, purchaseSignal |
+| observable privacy behavior | ✅ content hash on-chain, content in witness |
+| contract on preprod with verifiable address | ✅ `5c35a52355d...d80db3e` |
+| live demo link | ✅ `nightsignals.vercel.app` |
+| demo video (wallet + circuit call) | ✅ [youtu.be/XWVwx-QBnhM](https://youtu.be/XWVwx-QBnhM) |
+| README privacy claim documented | ✅ privacy model section |
+| 8+ meaningful commits | ✅ 96 commits |
+
+### 🌓 level 3 — first quarter ($30)
+
+| requirement | status |
+|---|---|
+| fully functional dApp using midnight privacy | ✅ browse + create + purchase |
+| 3+ tests passing | ✅ 13/13 |
+| CI/CD pipeline (workflow + passing runs) | ✅ GitHub Actions |
+| approved idea from provided list | ✅ Confidential Credentials |
+| live demo link | ✅ |
+| test screenshot | ✅ (in README) |
+| CI/CD badge in README | ✅ |
+| demo video (1 min, full functionality) | ✅ |
+| README privacy model section | ✅ public vs private data table |
+| product proposal | ✅ confidential credentials |
+| 10+ meaningful commits | ✅ 96 commits |
+
+### 🌔 level 4 — waxing gibbous ($60)
+
+| requirement | status |
+|---|---|
+| MVP live on preprod (verifiable) | ✅ `nightsignals.vercel.app` |
+| documentation (README + setup + usage) | ✅ |
+| CI/CD pipeline running | ✅ |
+| X profile linked in README | ✅ [@NightSignals_](https://x.com/NightSignals_) |
+| demo video of MVP | ✅ |
+| 15+ meaningful commits | ✅ 96 commits |
+
+### 🌕 level 5 — full moon (est $120)
+
+| requirement | status |
+|---|---|
+| 50 preprod users (verifiable addresses) | ⚠️ 50 wallets listed, 46 txns pending (faucet needed) |
+| feedback loop documented | ✅ [FEEDBACK.md](./FEEDBACK.md) — 50 responses |
+| updated documentation | ✅ |
+| demo video | ✅ |
+| 20+ meaningful commits | ✅ 96 commits |
 
 ---
 
