@@ -72,5 +72,3 @@ jobs:
 
       - name: Run contract verification tests
         run: npm test
-// 1785426837
-// 1785426837

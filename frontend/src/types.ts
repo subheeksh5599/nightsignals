@@ -28,5 +28,3 @@ export interface WalletState {
   coinPublicKey: string | null;
   error: string | null;
 }
-// 1785426837
-// 1785426837

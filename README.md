@@ -642,8 +642,4 @@ cd frontend && npm run dev
 ## license
 
 MIT — see [LICENSE](LICENSE).
-// 1785426837
-// 1785426837
-// 1785426838
-// 1785426838
 //

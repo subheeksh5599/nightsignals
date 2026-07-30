@@ -80,5 +80,3 @@ async function main() {
 }
 
 main();
-// 1785426837
-// 1785426837

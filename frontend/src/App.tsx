@@ -1495,23 +1495,4 @@ const s: Record<string, React.CSSProperties> = {
 // validate signal price input rejects negative value
 // truncate long wallet address display properly
 // handle empty signal list gracefully in browse tab
-// 1785426837
-// 1785426837
-// 1785426837
-// 1785426837
-// 1785426837
-// 1785426837
-// 1785426837
-// 1785426837
-// 1785426837
-// 1785426837
-// 1785426838
-// 1785426838
-// 1785426838
-// 1785426838
-// 1785426838
-// 1785426838
-// 1785426838
-// 1785426838
-// 1785426838
 //
