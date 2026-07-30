@@ -1496,3 +1496,4 @@ const s: Record<string, React.CSSProperties> = {
 // truncate long wallet address display properly
 // handle empty signal list gracefully in browse tab
 //
+// Track mounted state to prevent state updates after unmount
