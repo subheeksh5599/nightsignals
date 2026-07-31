@@ -2,7 +2,7 @@
 
 &nbsp;
 
-[![Live demo](https://img.shields.io/badge/●_live-nightsignals.vercel.app-6C5CE7)](https://nightsignals.vercel.app)
+[![Live demo](https://img.shields.io/badge/●_live-out--psi--bice.vercel.app-6C5CE7)](https://out-psi-bice.vercel.app)
 [![Demo video](https://img.shields.io/badge/▶_demo-YouTube-FF0000)](https://youtu.be/XWVwx-QBnhM)
 [![Midnight](https://img.shields.io/badge/Midnight-Preprod-14151a)](https://midnight.network)
 [![Compact](https://img.shields.io/badge/Compact-0.23-6C5CE7)](https://docs.midnight.network/compact)
@@ -19,7 +19,7 @@ nightsignals is a privacy-preserving insight marketplace on midnight network. cr
 
 ### ▶ live — browse and create signals at **[nightsignals.vercel.app](https://nightsignals.vercel.app)**
 
-**[ live demo ↗ ](https://nightsignals.vercel.app)** · **[ demo video ↗ ](https://youtu.be/XWVwx-QBnhM)** · **[ architecture ↓ ](#architecture)** · **[ privacy model ↓ ](#privacy-model)** · **[ run it locally ↓ ](#run-it-locally)** · **[ deploy ↓ ](#deploy)**
+**[ live demo ↗ ](https://out-psi-bice.vercel.app)** · **[ demo video ↗ ](https://youtu.be/XWVwx-QBnhM)** · **[ architecture ↓ ](#architecture)** · **[ privacy model ↓ ](#privacy-model)** · **[ run it locally ↓ ](#run-it-locally)** · **[ deploy ↓ ](#deploy)**
 
 built for midnight network. MIT licensed.
 
